@@ -46,6 +46,7 @@ import com.evernote.thrift.TException;
  * @author @tylersmithnet
  * @author kentaro suzuki
  */
+@Deprecated
 public class LinkedNoteStoreClient {
   /**
    * References users main note store

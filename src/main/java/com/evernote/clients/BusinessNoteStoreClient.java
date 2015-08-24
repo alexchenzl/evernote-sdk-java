@@ -48,6 +48,7 @@ import com.evernote.thrift.TException;
  * @author @tylersmithnet
  * @author kentaro suzuki
  */
+@Deprecated
 public class BusinessNoteStoreClient extends LinkedNoteStoreClient {
 
   BusinessNoteStoreClient(NoteStoreClient mainNoteStoreClient,

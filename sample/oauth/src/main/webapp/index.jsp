@@ -24,47 +24,47 @@
 <%@ page import='com.evernote.auth.EvernoteAuth' %>
 <%@ page import='com.evernote.auth.EvernoteService' %>
 <%@ page import="com.evernote.clients.NoteStoreClient" %>
-<%@ page import="com.evernote.clients.ClientFactory" %>
+<%@ page import="com.evernote.clients.ENClientFactory" %>
 <%@ page import='com.evernote.edam.type.*' %>
 <%@ page import='org.scribe.builder.api.EvernoteApi' %>
 <%@ page import='org.scribe.builder.ServiceBuilder' %>
 <%@ page import='org.scribe.model.*' %>
 <%@ page import='org.scribe.oauth.OAuthService' %>
-<%!
-/*
- * Fill in your Evernote API key. To get an API key, go to
- * http://dev.evernote.com/documentation/cloud/
- */
-static final String CONSUMER_KEY = "";
-static final String CONSUMER_SECRET = "";
+<%!/*
+   * Fill in your Evernote API key. To get an API key, go to
+   * http://dev.evernote.com/documentation/cloud/
+   */
+  static final String CONSUMER_KEY = "";
+  static final String CONSUMER_SECRET = "";
 
-/*
- * Replace this value with EvernoteService.PRODUCTION to switch from the Evernote
- * sandbox server to the Evernote production server.
- */
-static final EvernoteService EVERNOTE_SERVICE = EvernoteService.SANDBOX;
-static final String CALLBACK_URL = "index.jsp?action=callbackReturn";
-%>
+  /*
+   * Replace this value with EvernoteService.PRODUCTION or EvernoteService.YINXIANG (Evernote China) to switch from the Evernote
+   * sandbox server to the Evernote production server.
+   *
+   * For more information about supporting both services, please refer to https://dev.evernote.com/doc/articles/bootstrap.php
+   */
+  static final EvernoteService EVERNOTE_SERVICE = EvernoteService.SANDBOX;
+  static final String CALLBACK_URL = "index.jsp?action=callbackReturn";%>
 <%
-String accessToken = (String)session.getAttribute("accessToken");
-String requestToken = (String)session.getAttribute("requestToken");
-String requestTokenSecret = (String)session.getAttribute("requestTokenSecret");
-String verifier = (String)session.getAttribute("verifier");
-String noteStoreUrl = (String)session.getAttribute("noteStoreUrl");
+  String accessToken = (String) session.getAttribute("accessToken");
+  String requestToken = (String) session.getAttribute("requestToken");
+  String requestTokenSecret = (String) session.getAttribute("requestTokenSecret");
+  String verifier = (String) session.getAttribute("verifier");
+  String noteStoreUrl = (String) session.getAttribute("noteStoreUrl");
 
-String action = request.getParameter("action");
+  String action = request.getParameter("action");
 
-if ("".equals(CONSUMER_KEY)) {
+  if ("".equals(CONSUMER_KEY)) {
 %>
 <span style="color: red"> Before using this sample code you must
-  edit the file index.jsp and replace CONSUMER_KEY and CONSUMER_SECRET with
-  the values that you received from Evernote. If you do not have an API
-  key, you can request one from <a
-  href="http://dev.evernote.com/documentation/cloud/">http://dev.evernote.com/documentation/cloud/</a>
+	edit the file index.jsp and replace CONSUMER_KEY and CONSUMER_SECRET
+	with the values that you received from Evernote. If you do not have an
+	API key, you can request one from <a
+	href="http://dev.evernote.com/documentation/cloud/">http://dev.evernote.com/documentation/cloud/</a>
 </span>
 <%
-} else {
-  if (action != null) {
+  } else {
+    if (action != null) {
 %>
 
 <hr />
@@ -72,80 +72,85 @@ if ("".equals(CONSUMER_KEY)) {
 <pre>
 
 <%
-    // Set up the Scribe OAuthService.
-    String thisUrl = request.getRequestURL().toString();
-    String cbUrl = thisUrl.substring(0, thisUrl.lastIndexOf('/') + 1) + CALLBACK_URL;
-        
-    Class<? extends EvernoteApi> providerClass = EvernoteApi.Sandbox.class;
-    if (EVERNOTE_SERVICE == EvernoteService.PRODUCTION) {
-      providerClass = org.scribe.builder.api.EvernoteApi.class;
-    }
-    OAuthService service = new ServiceBuilder()
-      .provider(providerClass)
-      .apiKey(CONSUMER_KEY)
-      .apiSecret(CONSUMER_SECRET)
-      .callback(cbUrl)
-      .build();
+	  // Set up the Scribe OAuthService.
+      String thisUrl = request.getRequestURL().toString();
+      String cbUrl =
+          thisUrl.substring(0, thisUrl.lastIndexOf('/') + 1) + CALLBACK_URL;
 
-    try {
-      if ("reset".equals(action)) {
-        System.err.println("Resetting");
-        // Empty the server's stored session information for the current
-        // browser user so we can redo the test.
-        for (Enumeration<?> names = session.getAttributeNames(); names.hasMoreElements();) {
-          session.removeAttribute((String)names.nextElement());
-        }
-        accessToken = null;
-        requestToken = null;
-        requestTokenSecret = null;
-        verifier = null;
-        noteStoreUrl = null;
-        out.println("Removed all attributes from user session");
-
-      } else if ("getRequestToken".equals(action)) {
-        // Send an OAuth message to the Provider asking for a new Request
-        // Token because we don't have access to the current user's account.
-        Token scribeRequestToken = service.getRequestToken();
-    
-        out.println("<br/><b>Reply:</b> <br/> <span style=\"word-wrap: break-word\">" + scribeRequestToken.getRawResponse() + "</span>");
-        requestToken = scribeRequestToken.getToken();
-        requestTokenSecret = scribeRequestToken.getSecret();
-        session.setAttribute("requestToken", requestToken);
-        session.setAttribute("requestTokenSecret", requestTokenSecret);
-
-      } else if ("getAccessToken".equals(action)) {
-        // Send an OAuth message to the Provider asking to exchange the
-        // existing Request Token for an Access Token
-        Token scribeRequestToken = new Token(requestToken, requestTokenSecret);
-        Verifier scribeVerifier = new Verifier(verifier);
-        Token scribeAccessToken = service.getAccessToken(scribeRequestToken, scribeVerifier);
-        EvernoteAuth evernoteAuth = EvernoteAuth.parseOAuthResponse(EVERNOTE_SERVICE, scribeAccessToken.getRawResponse());
-        out.println("<br/><b>Reply:</b> <br/> <span style=\"word-wrap: break-word\">" + scribeAccessToken.getRawResponse() + "</span>");
-        accessToken = evernoteAuth.getToken();
-        noteStoreUrl = evernoteAuth.getNoteStoreUrl();
-        session.setAttribute("accessToken", accessToken);
-        session.setAttribute("noteStoreUrl", noteStoreUrl);
-       
-      } else if ("callbackReturn".equals(action)) {
-        requestToken = request.getParameter("oauth_token");
-        verifier = request.getParameter("oauth_verifier");
-        session.setAttribute("verifier", verifier);
-
-      } else if ("listNotebooks".equals(action)) {
-        out.println("Listing notebooks from: " + noteStoreUrl);
-        EvernoteAuth evernoteAuth = new EvernoteAuth(EVERNOTE_SERVICE, accessToken);
-        NoteStoreClient noteStoreClient = new ClientFactory(evernoteAuth).createNoteStoreClient();
-        
-        List<Notebook> notebooks = noteStoreClient.listNotebooks();
-        for (Notebook notebook : notebooks) {
-          out.println("Notebook: " + notebook.getName());
-        }
-        
+      Class<? extends EvernoteApi> providerClass = EvernoteApi.Sandbox.class;
+      if (EVERNOTE_SERVICE == EvernoteService.PRODUCTION) {
+        providerClass = org.scribe.builder.api.EvernoteApi.class;
       }
-    } catch (Exception e) {
-      e.printStackTrace();
-      out.println(e.toString());
-    }
+      OAuthService service =
+          new ServiceBuilder().provider(providerClass).apiKey(CONSUMER_KEY)
+              .apiSecret(CONSUMER_SECRET).callback(cbUrl).build();
+
+      try {
+        if ("reset".equals(action)) {
+          System.err.println("Resetting");
+          // Empty the server's stored session information for the current
+          // browser user so we can redo the test.
+          for (Enumeration<?> names = session.getAttributeNames(); names
+              .hasMoreElements();) {
+            session.removeAttribute((String) names.nextElement());
+          }
+          accessToken = null;
+          requestToken = null;
+          requestTokenSecret = null;
+          verifier = null;
+          noteStoreUrl = null;
+          out.println("Removed all attributes from user session");
+
+        } else if ("getRequestToken".equals(action)) {
+          // Send an OAuth message to the Provider asking for a new Request
+          // Token because we don't have access to the current user's account.
+          Token scribeRequestToken = service.getRequestToken();
+
+          out.println("<br/><b>Reply:</b> <br/> <span style=\"word-wrap: break-word\">"
+              + scribeRequestToken.getRawResponse() + "</span>");
+          requestToken = scribeRequestToken.getToken();
+          requestTokenSecret = scribeRequestToken.getSecret();
+          session.setAttribute("requestToken", requestToken);
+          session.setAttribute("requestTokenSecret", requestTokenSecret);
+
+        } else if ("getAccessToken".equals(action)) {
+          // Send an OAuth message to the Provider asking to exchange the
+          // existing Request Token for an Access Token
+          Token scribeRequestToken = new Token(requestToken, requestTokenSecret);
+          Verifier scribeVerifier = new Verifier(verifier);
+          Token scribeAccessToken =
+              service.getAccessToken(scribeRequestToken, scribeVerifier);
+          EvernoteAuth evernoteAuth =
+              EvernoteAuth.parseOAuthResponse(EVERNOTE_SERVICE, scribeAccessToken
+                  .getRawResponse());
+          out.println("<br/><b>Reply:</b> <br/> <span style=\"word-wrap: break-word\">"
+              + scribeAccessToken.getRawResponse() + "</span>");
+          accessToken = evernoteAuth.getToken();
+          noteStoreUrl = evernoteAuth.getNoteStoreUrl();
+          session.setAttribute("accessToken", accessToken);
+          session.setAttribute("noteStoreUrl", noteStoreUrl);
+
+        } else if ("callbackReturn".equals(action)) {
+          requestToken = request.getParameter("oauth_token");
+          verifier = request.getParameter("oauth_verifier");
+          session.setAttribute("verifier", verifier);
+
+        } else if ("listNotebooks".equals(action)) {
+          out.println("Listing notebooks from: " + noteStoreUrl);
+          EvernoteAuth evernoteAuth = new EvernoteAuth(EVERNOTE_SERVICE, accessToken);
+          NoteStoreClient noteStoreClient =
+              new ENClientFactory(evernoteAuth).createNoteStoreClient();
+
+          List<Notebook> notebooks = noteStoreClient.listNotebooks();
+          for (Notebook notebook : notebooks) {
+            out.println("Notebook: " + notebook.getName());
+          }
+
+        }
+      } catch (Exception e) {
+        e.printStackTrace();
+        out.println(e.toString());
+      }
 %>
 
 </pre>

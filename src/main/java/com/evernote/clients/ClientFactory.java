@@ -47,7 +47,7 @@ import com.evernote.thrift.transport.TTransportException;
  * 
  * @author kentaro suzuki
  */
-
+@Deprecated
 public class ClientFactory {
 
   private static final String USER_AGENT_KEY = "User-Agent";
