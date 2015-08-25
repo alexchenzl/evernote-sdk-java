@@ -41,6 +41,9 @@ public class ENHTMLToENMLHelper {
    * 
    */
   public ENHTMLToENMLHelper(ResourceFetcher fetcher, HTMLElementHandler handler) {
+    if (fetcher == null) {
+      throw new IllegalArgumentException("The argument fetcher must not be null!");
+    }
     this.fetcher = fetcher;
     this.handler = handler;
   }

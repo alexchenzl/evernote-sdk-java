@@ -54,6 +54,12 @@ public class ENBusinessNotebookHelper {
    */
   public ENBusinessNotebookHelper(NoteStoreClient businessClient,
       NoteStoreClient personalClient, String businessUsername, String businessUserShardId) {
+
+    if (businessClient == null || personalClient == null || businessUsername == null
+        || businessUserShardId == null) {
+      throw new IllegalArgumentException("All arguments must not be null!");
+    }
+
     this.businessClient = businessClient;
     this.personalClient = personalClient;
     this.businessUsername = businessUsername;

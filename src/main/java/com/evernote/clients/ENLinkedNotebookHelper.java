@@ -52,6 +52,9 @@ public class ENLinkedNotebookHelper {
    *
    */
   public ENLinkedNotebookHelper(NoteStoreClient client, LinkedNotebook linkedNotebook) {
+    if (client == null || linkedNotebook == null) {
+      throw new IllegalArgumentException("All arguments must not be null!");
+    }
     this.sharedClient = client;
     this.linkedNotebook = linkedNotebook;
     this.publicUserInfo = null;
@@ -69,6 +72,9 @@ public class ENLinkedNotebookHelper {
    */
   public ENLinkedNotebookHelper(NoteStoreClient client, LinkedNotebook linkedNotebook,
       PublicUserInfo publicUserInfo) {
+    if (client == null || linkedNotebook == null || publicUserInfo == null) {
+      throw new IllegalArgumentException("All arguments must not be null!");
+    }
     this.sharedClient = client;
     this.linkedNotebook = linkedNotebook;
     this.publicUserInfo = publicUserInfo;

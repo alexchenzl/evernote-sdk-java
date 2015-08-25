@@ -208,13 +208,12 @@ public class ENClientFactory {
    */
   public ENHTMLHelper createHTMLHelper(ResourceFetcher fetcher)
       throws TTransportException, EDAMUserException, EDAMSystemException, TException {
-
     String noteStoreUrl = this.evernoteAuth.getWebApiUrlPrefix();
     if (noteStoreUrl == null) {
       noteStoreUrl = createUserStoreClient().getNoteStoreUrl();
       this.evernoteAuth.setNoteStoreUrl(noteStoreUrl);
     }
-    return new ENHTMLHelper(this.evernoteAuth.getToken(), noteStoreUrl, fetcher);
+    return new ENHTMLHelper(this.evernoteAuth, fetcher);
   }
 
   /**

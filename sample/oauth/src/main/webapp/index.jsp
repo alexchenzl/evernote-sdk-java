@@ -80,7 +80,10 @@
       Class<? extends EvernoteApi> providerClass = EvernoteApi.Sandbox.class;
       if (EVERNOTE_SERVICE == EvernoteService.PRODUCTION) {
         providerClass = org.scribe.builder.api.EvernoteApi.class;
+      } else if (EVERNOTE_SERVICE == EvernoteService.YINXIANG){
+        providerClass = org.scribe.builder.api.EvernoteApi.Yinxiang.class;
       }
+      
       OAuthService service =
           new ServiceBuilder().provider(providerClass).apiKey(CONSUMER_KEY)
               .apiSecret(CONSUMER_SECRET).callback(cbUrl).build();

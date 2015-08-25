@@ -14,27 +14,15 @@ The SDK also contains two samples. The code in `sample/oauth` demonstrates the b
 
 JavaDocs for the SDK are available at http://dev.evernote.com/documentation/reference/javadoc/.
 
-Changes in version 1.25
+Changes in version 1.25.2
 -----------------------
 
-* Added RelatedQuery.referenceUri
-* New system exceptions thrown by getPublicNotebook and authenticateToSharedNote when the target content has been taken down.
-* Added SharedNotebook.recipientSettings, NoteStore.setSharedNotebookRecipientSettings
-* Added optional authenticationToken parameter to NoteStore.authenticateToSharedNote, only needed for YXBJ
-* Added creatorId and lastEditorId fields to NoteAttributes
-* Added two factor authentication functionality to UserStore.authenticate and authenticateLongSession, added UserStore.completeTwoFactorAuthentication.
-
-
-Changes in version 1.24
------------------------
-
-* Added Error code for Rate Limiting via [EdamErrorCode.RATE_LIMIT_REACHED](https://dev.evernote.com/documentation/reference/Errors.html#Enum_EDAMErrorCode) and [EdamSystemException.rateLimitDuraton](https://dev.evernote.com/documentation/reference/Errors.html#Struct_EDAMSystemException)
-* Deprecated [NoteStore.getSyncChunk](https://dev.evernote.com/documentation/reference/NoteStore.html#Fn_NoteStore_getSyncChunk) in favor of [NoteStore.getFilteredSyncChunk](https://dev.evernote.com/documentation/reference/NoteStore.html#Fn_NoteStore_getFilteredSyncChunk)
-* Deprecated [NoteStore.findNotes](https://dev.evernote.com/documentation/reference/NoteStore.html#Fn_NoteStore_findNotes) in favor of [NoteStore.findNotesMetaData](https://dev.evernote.com/documentation/reference/NoteStore.html#Fn_NoteStore_findNotesMetaData)
-* Added [BusinessUserInfo](https://dev.evernote.com/documentation/reference/Types.html#Struct_BusinessUserInfo) to [User](https://dev.evernote.com/documentation/reference/Types.html#Struct_BusinessUserInfo)
-* Added reminderOrder, reminderDoneTime, and reminderTime to [NoteAttributes](https://dev.evernote.com/documentation/reference/Types.html#Struct_NoteAttributes)
-* Added [SavedSearchScope](https://dev.evernote.com/documentation/reference/Types.html#Struct_SavedSearchScope) to [SavedSearch](https://dev.evernote.com/documentation/reference/Types.html#Struct_SavedSearch)
-
+* Added a class ENClientFactory and deprecated ClientFactory
+* Added a class ENLinkedNotebookHelper and deprecated LinkedNoteStoreClient
+* Added a class ENBusinessNotebookHelper and deprecated BusinessNoteStoreClient
+* Added a search helper class ENSearchHelper
+* Added ENHTMLHelper to help developers download Note as HTML
+* Added ENHTMLToENMLHelper to help developers transform HTML to ENML easily
 
 Prerequisites
 -------------
@@ -53,7 +41,7 @@ The easiest way to incorporate the SDK into your Java project is to use Maven. I
 <dependency>
     <groupId>com.evernote</groupId>
     <artifactId>evernote-api</artifactId>
-    <version>1.25.1</version>
+    <version>1.25.2</version>
 </dependency>
 ```
 
@@ -67,25 +55,26 @@ You'll find `evernote-sdk-1.25.1.jar` in the target directory after the build co
 
 Sample Code - Client
 ------------------------
-The code in `sample/client/EDAMDemo.java` demonstrates the basics of using the Evernote API, using developer tokens instead of OAuth to simplify the authentication process while you're learning. Real applications that support multiple users need to use OAuth.
+The code in `sample/client/` demonstrates the basics of using the Evernote API, using developer tokens instead of OAuth to simplify the authentication process while you're learning. Real applications that support multiple users need to use OAuth.
 
 1. Build the SDK library
 
     ```bash
     $ mvn package
     ```
-1. Open `sample/client/EDAMDemo.java`
+1. Open `sample/client/src/main/com/evernote/EDAMDemo.java`
 1. Scroll down to the top of the `EDAMDemo` class and fill in your Evernote developer token.
-1. On the command line, run the following command to compile the class:
+1. On the command line, run the following command to build the project:
 
     ```bash
-    $ javac -classpath ../../target/evernote-api-1.25.1.jar EDAMDemo.java
+    $ cd sample/client
+    $ mvn package
     ```
 
 1. On the command line, run the following command to execute the sample app:
 
     ```bash
-    $ java -classpath .:../../target/evernote-api-1.25.1.jar EDAMDemo
+    $ java -jar target/EDAMDemo-jar-with-dependencies.jar
     ````
 
 Sample Code - OAuth

@@ -34,6 +34,9 @@ public class ENSearchHelper {
       new HashMap<String, ENLinkedNotebookHelper>();
 
   public ENSearchHelper(ENClientFactory factory, NoteStoreClient client) {
+    if (factory == null || client == null) {
+      throw new IllegalArgumentException("All arguments must not be null!");
+    }
     this.clientFactory = factory;
     this.personalClient = client;
   }
