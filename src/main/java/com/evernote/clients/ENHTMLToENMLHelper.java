@@ -109,7 +109,7 @@ public class ENHTMLToENMLHelper {
       for (CSSPair item : cssPariList) {
         cssHandler.addStyleSheet(item.getCss(), item.getUrl());
       }
-      html = cssHandler.processHTML2(html, htmlBaseUrl);
+      html = cssHandler.processHTMLWithSpecifiedCSS(html, htmlBaseUrl);
     }
 
     HTMLToENML converter = new HTMLToENML(fetcher, handler);

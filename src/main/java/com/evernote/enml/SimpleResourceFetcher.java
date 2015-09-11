@@ -5,7 +5,6 @@
 package com.evernote.enml;
 
 import java.io.BufferedInputStream;
-
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -76,8 +75,8 @@ public class SimpleResourceFetcher implements ResourceFetcher {
       byte ip1 = address.getAddress()[0];
       byte ip2 = address.getAddress()[1];
       if (address.isLoopbackAddress() || ip1 == (byte) 10 || ip1 == (byte) 127
-          || (ip1 == (byte) 192 && ip2 == (byte) 168)
-          || (ip1 == (byte) 172 && ip2 >= (byte) 16 && ip2 <= (byte) 31)) {
+          || (ip1 == (byte) 192 && ip2 == (byte) 168) || (ip1 == (byte) 172
+              && ip2 >= (byte) 16 && ip2 <= (byte) 31)) {
         return false;
       }
       return true;
@@ -105,8 +104,8 @@ public class SimpleResourceFetcher implements ResourceFetcher {
     InputStream in = null;
     try {
       conn = openURLConnection(new URL(resourceURL), "GET");
-      Map<String, String> headers =
-          customHeaders == null ? defaultHeaders : customHeaders;
+      Map<String, String> headers = customHeaders == null ? defaultHeaders
+          : customHeaders;
 
       if (headers != null) {
         for (Entry<String, String> entry : headers.entrySet()) {
@@ -125,7 +124,7 @@ public class SimpleResourceFetcher implements ResourceFetcher {
         String charset = parseCharset(contentType);
 
         String disposition = conn.getHeaderField("Content-Disposition");
-        String filename = getFileName(resourceURL, disposition);
+        String filename = getFileName(resourceURL, disposition, mime);
 
         return new BinaryResource(result, mime, charset, filename);
       } else {
@@ -165,13 +164,13 @@ public class SimpleResourceFetcher implements ResourceFetcher {
   }
 
   /**
-   * Attempt to get pfilename of resource to download
+   * Attempt to get possible filename of resource to download
    * 
    * @param urlString
    * @param response
    * @return
    */
-  private String getFileName(String urlString, String disposition) {
+  private String getFileName(String urlString, String disposition, String mime) {
     // extracts file name from header field
     if (disposition != null) {
       int index = disposition.indexOf("filename=");
@@ -189,9 +188,16 @@ public class SimpleResourceFetcher implements ResourceFetcher {
       int end = filename.indexOf("?");
       if (begin > 0) {
         if (end > 0 && end > begin) {
-          filename = filename.substring(begin, end);
+          filename = filename.substring(begin + 1, end);
         } else {
-          filename = filename.substring(begin);
+          filename = filename.substring(begin + 1);
+        }
+      }
+
+      if (filename.indexOf(".") < 0) {
+        String ext = ENMLUtil.getPossibleExtension(mime);
+        if (ext != null) {
+          filename += "." + ext;
         }
       }
       return filename;
@@ -214,8 +220,8 @@ public class SimpleResourceFetcher implements ResourceFetcher {
 
     try {
       conn = openURLConnection(new URL(resourceURL), "GET");
-      Map<String, String> headers =
-          customHeaders == null ? defaultHeaders : customHeaders;
+      Map<String, String> headers = customHeaders == null ? defaultHeaders
+          : customHeaders;
 
       if (headers != null) {
         for (Entry<String, String> entry : headers.entrySet()) {

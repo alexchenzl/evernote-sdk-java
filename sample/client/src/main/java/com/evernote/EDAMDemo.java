@@ -506,7 +506,6 @@ public class EDAMDemo {
       }
     }
     System.out.println();
-
   }
 
   /**
@@ -519,22 +518,24 @@ public class EDAMDemo {
   final class EvernoteBlogElementHandler implements HTMLElementHandler {
 
     public void initialize() {
-      // Don't need initialization
+      // Don't need initialization here
     }
 
     public boolean process(Element element, ResourceFetcher fetcher) {
       String className = element.className();
       if (className != null) {
-        // Class top and bottom use :after to clear float, we need to add a div to
+        // Class top and bottom use :after to clear float, we can add a div tag to
         // implement the same effect in ENML
         if (className.equals("top") || className.equals("bottom")) {
           element.after("<div style=\"clear:both;\"></div>");
         } else if (className.contains("premium-callout")) {
-          // We also want to remove the advertisements in this page
+          // We also want to remove the premium advertisement in this page
           element.remove();
+          // False means the element doesn't need further process
           return false;
         }
       }
+      // True means this element needs further process
       return true;
     }
   }

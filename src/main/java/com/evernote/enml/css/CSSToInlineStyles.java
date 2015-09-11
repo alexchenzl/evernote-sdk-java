@@ -49,8 +49,8 @@ import com.helger.css.writer.CSSWriterSettings;
  */
 public class CSSToInlineStyles {
 
-  private static final Logger logger = Logger
-      .getLogger(CSSToInlineStyles.class.getName());
+  private static final Logger logger = Logger.getLogger(CSSToInlineStyles.class
+      .getName());
 
   // fetcher is used to download CSS files
   private final ResourceFetcher fetcher;
@@ -86,7 +86,7 @@ public class CSSToInlineStyles {
   }
 
   /**
-   * Downloads external style sheets in this html content, then coverts them and embedded
+   * Downloads external style sheets in this HTML content, then converts them and embedded
    * styles into inline styles
    *
    * @param html
@@ -138,16 +138,16 @@ public class CSSToInlineStyles {
 
   /**
    * Apply style sheets that are added through {@link #addStyleSheet(String, String)} to
-   * the html content, converting them into inline styles.
+   * the HTML content, converting them into inline styles.
    *
-   * The external styles and embedded styles within the head section of this html content
+   * The external styles and embedded styles within the head section of this HTML content
    * will be ignored, but original inline styles will be kept.
    *
    * @param html
    * @param baseURLStr
    * @return
    */
-  public String processHTML2(String html, String baseURLStr) {
+  public String processHTMLWithSpecifiedCSS(String html, String baseURLStr) {
 
     if (allStyleSheets == null || allStyleSheets.size() == 0) {
       return html;
@@ -176,13 +176,12 @@ public class CSSToInlineStyles {
   }
 
   /**
-   * Add style sheet together with its base url to this object
+   * Add style sheet together with its base URL to this object
    *
    * @param styleSheetContent
    * @param baseUrlStr
    *
    */
-
   public boolean addStyleSheet(String styleSheetContent, String baseUrlStr) {
 
     if (styleSheetContent == null || styleSheetContent.isEmpty()) {
@@ -197,9 +196,8 @@ public class CSSToInlineStyles {
       allStyleSheetsBaseURLs = new ArrayList<URL>();
     }
 
-    CascadingStyleSheet sheet =
-        CSSReader.readFromString(styleSheetContent, ENMLUtil.UTF8, ECSSVersion.CSS30,
-            CSS_PARSE_ERROR_HANDLER);
+    CascadingStyleSheet sheet = CSSReader.readFromString(styleSheetContent, ENMLUtil.UTF8,
+        ECSSVersion.CSS30, CSS_PARSE_ERROR_HANDLER);
 
     if (sheet != null) {
       URL baseURL = null;
@@ -265,9 +263,9 @@ public class CSSToInlineStyles {
       // only want "screen" and "all"
       if (!mq.hasMediaExpressions()) {
         String medium = mq.getMedium();
-        if (medium != null
-            && (medium.equalsIgnoreCase(ENMLConstants.CSS_MEDIA_TYPE_SCREEN) || medium
-                .equalsIgnoreCase(ENMLConstants.CSS_MEDIA_TYPE_ALL))) {
+        if (medium != null && (medium.equalsIgnoreCase(
+            ENMLConstants.CSS_MEDIA_TYPE_SCREEN) || medium.equalsIgnoreCase(
+                ENMLConstants.CSS_MEDIA_TYPE_ALL))) {
           return true;
         }
       }
@@ -344,9 +342,8 @@ public class CSSToInlineStyles {
 
               CSSDeclarationList existingDeclarationList = null;
               if (style != null && !style.isEmpty()) {
-                existingDeclarationList =
-                    CSSReaderDeclarationList.readFromString(style, ECSSVersion.CSS30,
-                        CSS_PARSE_ERROR_HANDLER);
+                existingDeclarationList = CSSReaderDeclarationList.readFromString(style,
+                    ECSSVersion.CSS30, CSS_PARSE_ERROR_HANDLER);
               }
               if (existingDeclarationList == null) {
                 existingDeclarationList = new CSSDeclarationList();
@@ -372,15 +369,15 @@ public class CSSToInlineStyles {
 
                 CSSSpecificity newSpecificity = new CSSSpecificity(selector, declaration);
                 String property = declaration.getProperty();
-                CSSDeclaration existingDeclaration =
-                    existingDeclarationList.getDeclarationOfPropertyName(property);
+                CSSDeclaration existingDeclaration = existingDeclarationList
+                    .getDeclarationOfPropertyName(property);
 
                 if (existingDeclaration == null) {
                   existingDeclarationList.addDeclaration(inlineStylePos++, declaration);
                   cascadingInfo.getSpecificityMap().put(property, newSpecificity);
                 } else {
-                  CSSSpecificity existingSpecificity =
-                      cascadingInfo.getSpecificityMap().get(property);
+                  CSSSpecificity existingSpecificity = cascadingInfo.getSpecificityMap()
+                      .get(property);
                   if (existingSpecificity == null) {
                     // means the existing declaration is an original inline declaration
                     existingSpecificity = new CSSSpecificity(existingDeclaration);

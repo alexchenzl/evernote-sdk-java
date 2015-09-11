@@ -29,6 +29,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -58,6 +60,44 @@ public class ENMLUtil {
   public static final String EDAM_HASH_ALGORITHM = "MD5";
 
   public static final Pattern URL_PATTERN = Pattern.compile("([^:]*):(.*)");
+
+  /**
+   * Defines mime types used widely in ENML
+   */
+  public static final String MIME_PNG = "image/png";
+  public static final String MIME_GIF = "image/gif";
+  public static final String MIME_JPEG = "image/jpeg";
+  public static final String MIME_TIFF = "image/tiff";
+  public static final String MIME_JPG = "image/jpg";
+  public static final String MIME_PJPEG = "image/pjpeg";
+  public static final String MIME_BMP = "image/bmp";
+  public static final String MIME_WAV = "audio/wav";
+  public static final String MIME_VND_WAVE = "audio/vnd.wave";
+  public static final String MIME_MP3 = "audio/mpeg";
+  public static final String MIME_AMR = "audio/amr";
+  public static final String MIME_PDF = "application/pdf";
+
+  private static Map<String, String> mimeExtMap = new HashMap<String, String>();
+
+  static {
+    mimeExtMap.put(MIME_PNG, "png");
+    mimeExtMap.put(MIME_GIF, "gif");
+    mimeExtMap.put(MIME_JPEG, "jpg");
+    mimeExtMap.put(MIME_JPG, "jpg");
+    mimeExtMap.put(MIME_PJPEG, "jpg");
+    mimeExtMap.put(MIME_TIFF, "tif");
+    mimeExtMap.put(MIME_BMP, "bmp");
+
+    mimeExtMap.put(MIME_WAV, "wav");
+    mimeExtMap.put(MIME_VND_WAVE, "wav");
+    mimeExtMap.put(MIME_MP3, "mp3");
+    mimeExtMap.put(MIME_AMR, "amr");
+    mimeExtMap.put(MIME_PDF, "pdf");
+  }
+
+  public static String getPossibleExtension(String mime) {
+    return mimeExtMap.get(mime);
+  }
 
   /**
    * A runtime exception that will be thrown when we hit an error that should "never"
@@ -364,9 +404,8 @@ public class ENMLUtil {
     try {
       if (urlString != null) {
         URL url = new URL(urlString.trim());
-        URI uri =
-            new URI(url.getProtocol(), url.getUserInfo(), url.getHost(), url.getPort(),
-                url.getPath(), url.getQuery(), url.getRef());
+        URI uri = new URI(url.getProtocol(), url.getUserInfo(), url.getHost(), url
+            .getPort(), url.getPath(), url.getQuery(), url.getRef());
         return uri.toASCIIString();
       }
     } catch (Exception e) {
