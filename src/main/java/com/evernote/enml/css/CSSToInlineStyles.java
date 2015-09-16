@@ -44,7 +44,7 @@ import com.helger.css.writer.CSSWriterSettings;
  * Converts an HTML document with external and embedded styles into an HTML document with
  * inline styles. Pseudo class and pseudo element can not be handled with this tool.
  * 
- * This class is not thread safe.
+ * The instance is not thread safe.
  * 
  */
 public class CSSToInlineStyles {
@@ -91,7 +91,7 @@ public class CSSToInlineStyles {
    *
    * @param html
    * @param baseURLStr
-   * @return
+   * @return The result HTML string
    */
   public String processHTML(String html, String baseURLStr) {
 
@@ -145,7 +145,7 @@ public class CSSToInlineStyles {
    *
    * @param html
    * @param baseURLStr
-   * @return
+   * @return The result HTML string
    */
   public String processHTMLWithSpecifiedCSS(String html, String baseURLStr) {
 
@@ -180,7 +180,7 @@ public class CSSToInlineStyles {
    *
    * @param styleSheetContent
    * @param baseUrlStr
-   *
+   * @return {@code true} if it's successful to add the style sheet content
    */
   public boolean addStyleSheet(String styleSheetContent, String baseUrlStr) {
 
@@ -239,7 +239,7 @@ public class CSSToInlineStyles {
    * Determines if rule is usable (i.e. no media specified, or it's "screen" or "all").
    *
    * @param rule
-   * @return true if rule is usable
+   * @return {@code true} if rule is usable
    */
   private boolean isValidMedia(CSSImportRule rule) {
     if (rule.hasMediaQueries()) {

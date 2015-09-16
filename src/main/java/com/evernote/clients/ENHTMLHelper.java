@@ -15,7 +15,9 @@ import com.evernote.enml.ResourceFetcher;
 
 /**
  * Provides methods to retrieve Note content as HTML instead of ENML, and also to download
- * ENML Resource as local files
+ * ENML Resource as local files.
+ * <p>
+ * It's NOT thread safe.
  * 
  * @author alexchenzl
  */
@@ -28,10 +30,10 @@ public class ENHTMLHelper {
   private Pattern resUrlPattern;
 
   /**
+   * Constructor of {@link ENHTMLHelper}
    * 
-   * @param token The authentication token to access the resources
-   * @param noteStoreUrl URL of the note store in where those resources reside
-   * @fetcher fetcher ResourceFetcher to download files from remote servers
+   * @param auth {@link EvernoteAuth} object of this account
+   * @param fetcher A {@link ResourceFetcher} object to download files from remote servers
    * 
    */
   public ENHTMLHelper(EvernoteAuth auth, ResourceFetcher fetcher) {
@@ -40,7 +42,8 @@ public class ENHTMLHelper {
     }
 
     if (auth.getToken() == null || auth.getNoteStoreUrl() == null) {
-      throw new IllegalArgumentException("OAuth token and noteStoreUrl must not be null!");
+      throw new IllegalArgumentException(
+          "OAuth token and noteStoreUrl must not be null!");
     }
 
     this.customHeader = new HashMap<String, String>();
@@ -54,10 +57,9 @@ public class ENHTMLHelper {
     idx = noteStoreUrl.indexOf("notestore");
     this.resBaseUrl = noteStoreUrl.substring(0, idx) + "res/";
 
-    this.resUrlPattern =
-        Pattern.compile("(" + this.resBaseUrl
-            + "([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}).*?)\"",
-            Pattern.MULTILINE);
+    this.resUrlPattern = Pattern.compile("(" + this.resBaseUrl
+        + "([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}).*?)\"",
+        Pattern.MULTILINE);
   }
 
   /**
@@ -65,7 +67,7 @@ public class ENHTMLHelper {
    * thrift API. For more details, please refer to
    * https://dev.evernote.com/doc/articles/resources.php
    * 
-   * @param resourceGuid Guid of the resource to be downloaded
+   * @param resourceGuid Guid of the resource to download
    * @param filename Full output filename
    * @return {@code true} if success
    * @throws IOException
@@ -89,7 +91,7 @@ public class ENHTMLHelper {
    *          machine
    * @param webResourcePath It's used to generate full paths of resource links in the HTML
    *          content
-   * @return
+   * @return The HTML string result
    * @throws IOException
    */
   public String downloadNoteAsHtml(String guid, String localResourcePath,
@@ -108,7 +110,7 @@ public class ENHTMLHelper {
 
   private String downloadAllResourcesInHTML(String html, String localResourcePath,
       String webResourcePath) throws IOException {
-    if (html != null && localResourcePath != null && localResourcePath != null) {
+    if (html != null && localResourcePath != null) {
       String result = html;
       Matcher matcher = resUrlPattern.matcher(html);
       while (matcher.find()) {

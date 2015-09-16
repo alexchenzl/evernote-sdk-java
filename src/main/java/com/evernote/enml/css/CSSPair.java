@@ -5,6 +5,11 @@ package com.evernote.enml.css;
 
 import java.util.Objects;
 
+/**
+ * A helper class to represent a pair of style sheet content and its base url.
+ * 
+ * @author alexchenzl
+ */
 public class CSSPair {
 
   private String url;

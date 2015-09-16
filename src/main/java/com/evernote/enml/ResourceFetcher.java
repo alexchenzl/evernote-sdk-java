@@ -8,7 +8,7 @@ import java.util.Map;
 
 /**
  * An interface to fetch resource from remote servers or even local disks.
- * 
+ * <p>
  * Developers may use HttpConnection, HttpClient or OkHttpClient on Android to implement
  * this interface
  * 
@@ -20,7 +20,7 @@ public interface ResourceFetcher {
    * To implement this interface to prohibit malicious downloading attempts
    * 
    * @param urlString
-   * @return
+   * @return {@code true} if the url string is allowed
    */
   public boolean isAllowedURL(String urlString);
 
@@ -29,7 +29,7 @@ public interface ResourceFetcher {
    * 
    * @param resourceURL
    * @param customHeaders
-   * @return
+   * @return A BinaryResource object
    * @throws IOException
    * @throws ClientProtocolException
    */
@@ -42,7 +42,7 @@ public interface ResourceFetcher {
    * @param resourceURL
    * @param customHeaders
    * @param filename
-   * @return
+   * @return {@code true} if it's successful to download the resource and save it
    * @throws IOException
    * @throws ClientProtocolException
    */

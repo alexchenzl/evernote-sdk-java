@@ -56,8 +56,8 @@ import com.evernote.enml.dtd.SimpleENMLDTD;
 /**
  * A simple converter to transform HTML content into ENML content. The converter only
  * accepts in-line CSS style. It also ignores any Java scripts in the HTML content.
- * 
- * This object is not thread-safe
+ * <p>
+ * The instance is not thread-safe.
  * 
  * @author alexchenzl
  */
@@ -75,8 +75,8 @@ public class HTMLToENML {
   private ResourceFetcher fetcher;
   private HTMLElementHandler customizedHandler;
 
-  private static final Pattern PATTERN_DISPLAY_NONE = Pattern
-      .compile("display\\s*:\\s*none");
+  private static final Pattern PATTERN_DISPLAY_NONE = Pattern.compile(
+      "display\\s*:\\s*none");
 
   // some tags are visible but not permitted in ENML, try to convert them to DIV tags
   // so that the content in these tags may be kept in the generated ENML content
@@ -107,8 +107,8 @@ public class HTMLToENML {
   /**
    * Construct a HTMLToENML object
    * 
-   * @param urlString
-   * @return
+   * @param fetcher
+   * @param customizedHandler
    */
   public HTMLToENML(ResourceFetcher fetcher, HTMLElementHandler customizedHandler) {
     this.fetcher = fetcher;
@@ -127,7 +127,7 @@ public class HTMLToENML {
    * Get generated ENML resource objects by images or other binary files in this HTML
    * content.
    * 
-   * @return
+   * @return A list of Resource objects
    */
   public List<Resource> getResources() {
     return resourceList;
@@ -136,7 +136,7 @@ public class HTMLToENML {
   /**
    * Get extracted title from the HTML head tag. It may be null.
    *
-   * @return
+   * @return The title string
    */
   public String getTitle() {
     return title;
@@ -147,7 +147,7 @@ public class HTMLToENML {
    * 
    * This content doesn't include ENML header and ENML root tag en-note.
    * 
-   * @return
+   * @return The ENML string content
    */
   public String getContent() {
     return content;
@@ -163,8 +163,8 @@ public class HTMLToENML {
    * 
    * @param html
    * @param selector
-   * @param baseUri
-   * @return
+   * @param baseURLStr
+   * @return {@code true} if the process is successful
    */
   public boolean convert(String html, String selector, String baseURLStr) {
     if (html == null) {
@@ -257,7 +257,8 @@ public class HTMLToENML {
   /**
    * 
    * @param element
-   * @return false means the element is removed
+   * @return {@code true} if this element needs further processing, false means the
+   *         element is removed
    */
   protected boolean transformSpecialTags(Element element) {
 
@@ -280,8 +281,9 @@ public class HTMLToENML {
       element.tagName(ENMLConstants.HTML_SPAN_TAG);
     } else if (elementName.equals(ENMLConstants.HTML_BODY)) {
       element.tagName(ENMLConstants.HTML_DIV_TAG);
-    } else if (elementName.equals(ENMLConstants.HTML_INPUT_TAG)
-        && "checkbox".equalsIgnoreCase(element.attr("type"))) {
+    } else
+      if (elementName.equals(ENMLConstants.HTML_INPUT_TAG) && "checkbox".equalsIgnoreCase(
+          element.attr("type"))) {
       element.tagName(ENMLConstants.EN_TODO_TAG);
       element.removeAttr("type");
     } else if (elementName.equals(ENMLConstants.HTML_IMG_TAG)) {
@@ -310,13 +312,12 @@ public class HTMLToENML {
         }
 
         if (binaryResource != null) {
-          Resource res =
-              buildResource(binaryResource.getBytes(), binaryResource.getMime(),
-                  binaryResource.getFilename());
+          Resource res = buildResource(binaryResource.getBytes(), binaryResource
+              .getMime(), binaryResource.getFilename());
           element.tagName(ENMLConstants.EN_MEDIA_TAG);
           element.attr(ENMLConstants.EN_MEDIA_ATTR_TYPE, res.getMime());
-          element.attr(ENMLConstants.EN_MEDIA_ATTR_HASH, ENMLUtil.bytesToHex(res
-              .getData().getBodyHash()));
+          element.attr(ENMLConstants.EN_MEDIA_ATTR_HASH, ENMLUtil.bytesToHex(res.getData()
+              .getBodyHash()));
           element.removeAttr(ENMLConstants.HTML_IMG_SRC_ATTR);
           resourceList.add(res);
         } else {
@@ -367,8 +368,8 @@ public class HTMLToENML {
           }
         }
 
-        if (attrName.equalsIgnoreCase(ENMLConstants.HTML_ANCHOR_HREF_ATTR)
-            || attrName.equalsIgnoreCase(ENMLConstants.HTML_IMG_SRC_ATTR)) {
+        if (attrName.equalsIgnoreCase(ENMLConstants.HTML_ANCHOR_HREF_ATTR) || attrName
+            .equalsIgnoreCase(ENMLConstants.HTML_IMG_SRC_ATTR)) {
           if (ENMLUtil.isValidURL(attrValue)) {
             attr.setValue(ENMLUtil.escapeURL(attrValue));
           } else {
@@ -386,8 +387,8 @@ public class HTMLToENML {
       for (DTDAttribute dtdAttr : requiredAttrMap.values()) {
         if (!attrNameSet.contains(dtdAttr.getName())) {
           String value = dtdAttr.getValue();
-          if (value == null
-              && dtdAttr.getDefaultValueModel() == DefaultValueModel.REQUIRED) {
+          if (value == null && dtdAttr
+              .getDefaultValueModel() == DefaultValueModel.REQUIRED) {
             if (dtdAttr.getType() == AttributeType.SET) {
               value = (String) dtdAttr.getEnumeratedValues().toArray()[0];
             } else {

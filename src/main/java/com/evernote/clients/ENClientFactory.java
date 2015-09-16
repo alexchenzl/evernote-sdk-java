@@ -45,7 +45,8 @@ import com.evernote.thrift.transport.THttpClient;
 import com.evernote.thrift.transport.TTransportException;
 
 /**
- * A class to create User and Note store clients, also some helper ojbects
+ * A factory class to create User store and Note store clients, also some other helper
+ * objects.
  * 
  * @author alexchenzl
  */
@@ -74,7 +75,6 @@ public class ENClientFactory {
    * UserStore.Client instance. The returned client can be used for any number of API
    * calls, but is NOT thread safe.
    * 
-   * @param url to connect to
    * 
    * @throws TTransportException if an error occurs setting up the connection to the
    *           Evernote service.
@@ -114,7 +114,7 @@ public class ENClientFactory {
    * safe.
    * 
    * @param linkedNotebook
-   * @return
+   * @return A new {@link ENLinkedNotebookHelper} object
    * @throws EDAMUserException
    * @throws EDAMSystemException
    * @throws TException
@@ -123,9 +123,8 @@ public class ENClientFactory {
   public ENLinkedNotebookHelper createLinkedNotebookHelper(LinkedNotebook linkedNotebook)
       throws EDAMUserException, EDAMSystemException, TException, EDAMNotFoundException {
 
-    NoteStoreClient tmpNoteStoreClient =
-        createStoreClient(NoteStoreClient.class, linkedNotebook.getNoteStoreUrl(),
-            evernoteAuth.getToken());
+    NoteStoreClient tmpNoteStoreClient = createStoreClient(NoteStoreClient.class,
+        linkedNotebook.getNoteStoreUrl(), evernoteAuth.getToken());
 
     if (linkedNotebook.getUri() != null) {
       // this is a public notebook, shareKey is null at this time
@@ -134,11 +133,10 @@ public class ENClientFactory {
       return new ENLinkedNotebookHelper(tmpNoteStoreClient, linkedNotebook, info);
     } else {
       String shareKey = linkedNotebook.getShareKey();
-      AuthenticationResult sharedAuth =
-          tmpNoteStoreClient.authenticateToSharedNotebook(shareKey);
-      NoteStoreClient sharedNoteStoreClient =
-          createStoreClient(NoteStoreClient.class, linkedNotebook.getNoteStoreUrl(),
-              sharedAuth.getAuthenticationToken());
+      AuthenticationResult sharedAuth = tmpNoteStoreClient.authenticateToSharedNotebook(
+          shareKey);
+      NoteStoreClient sharedNoteStoreClient = createStoreClient(NoteStoreClient.class,
+          linkedNotebook.getNoteStoreUrl(), sharedAuth.getAuthenticationToken());
       return new ENLinkedNotebookHelper(sharedNoteStoreClient, linkedNotebook);
     }
   }
@@ -149,7 +147,7 @@ public class ENClientFactory {
    * The returned instance can be used for any number of API calls, but is NOT thread
    * safe.
    * 
-   * @return
+   * @return A new {@link ENBusinessNotebookHelper} object
    * @throws TException
    * @throws EDAMUserException
    * @throws EDAMSystemException
@@ -158,11 +156,11 @@ public class ENClientFactory {
       EDAMUserException, EDAMSystemException {
     authenticateToBusiness();
     NoteStoreClient personalClient = createNoteStoreClient();
-    AuthenticationResult businessAuthResult =
-        createUserStoreClient().authenticateToBusiness();
-    NoteStoreClient businessClient =
-        createStoreClient(NoteStoreClient.class, businessAuthenticationResult
-            .getNoteStoreUrl(), businessAuthenticationResult.getAuthenticationToken());
+    AuthenticationResult businessAuthResult = createUserStoreClient()
+        .authenticateToBusiness();
+    NoteStoreClient businessClient = createStoreClient(NoteStoreClient.class,
+        businessAuthenticationResult.getNoteStoreUrl(), businessAuthenticationResult
+            .getAuthenticationToken());
     User businessUser = businessAuthResult.getUser();
     return new ENBusinessNotebookHelper(businessClient, personalClient, businessUser
         .getUsername(), businessUser.getShardId());
@@ -170,8 +168,8 @@ public class ENClientFactory {
 
   protected final synchronized void authenticateToBusiness() throws TException,
       EDAMUserException, EDAMSystemException {
-    if (businessAuthenticationResult == null
-        || businessAuthenticationResult.getExpiration() < System.currentTimeMillis()) {
+    if (businessAuthenticationResult == null || businessAuthenticationResult
+        .getExpiration() < System.currentTimeMillis()) {
       businessAuthenticationResult = createUserStoreClient().authenticateToBusiness();
     }
   }
@@ -182,7 +180,7 @@ public class ENClientFactory {
    * The returned instance can be used for any number of API calls, but is NOT thread
    * safe.
    * 
-   * @return
+   * @return A new {@link ENSearchHelper} object
    * @throws TException
    * @throws EDAMUserException
    * @throws EDAMSystemException
@@ -200,7 +198,7 @@ public class ENClientFactory {
    * safe.
    * 
    * @param fetcher
-   * @return
+   * @return A new {@link ENHTMLHelper} object
    * @throws TTransportException
    * @throws EDAMUserException
    * @throws EDAMSystemException
@@ -224,7 +222,7 @@ public class ENClientFactory {
    * 
    * @param fetcher
    * @param handler
-   * @return
+   * @return A new {@link ENHTMLToENMLHelper} object
    */
   public ENHTMLToENMLHelper createHTMLToENMLHelper(ResourceFetcher fetcher,
       HTMLElementHandler handler) {

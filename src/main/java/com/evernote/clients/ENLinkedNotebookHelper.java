@@ -34,7 +34,9 @@ import com.evernote.edam.userstore.PublicUserInfo;
 import com.evernote.thrift.TException;
 
 /**
- * Provides several helper methods for {@link LinkedNotebook}. * It's NOT thread safe
+ * Provides several helper methods for LinkedNotebook.
+ * <p>
+ * It's NOT thread safe.
  * 
  * @author alexchenzl
  * 
@@ -46,8 +48,8 @@ public class ENLinkedNotebookHelper {
   private String correspondingNotebookGuid;
 
   /**
-   * @param client NoteStoreClient object of the note store that owns the corresponding
-   *          Notebook of this LinkedNotebook.
+   * @param client {@link NoteStoreClient} object of the note store that owns the
+   *          corresponding Notebook of this LinkedNotebook.
    * @param linkedNotebook The desired linked notebook.
    *
    */
@@ -63,8 +65,8 @@ public class ENLinkedNotebookHelper {
   /**
    * If the LinkedNotebook is a public Notebook, please use this constructor
    * 
-   * @param client NoteStoreClient object of the note store that owns the corresponding
-   *          Notebook of this LinkedNotebook.
+   * @param client {@link NoteStoreClient} object of the note store that owns the
+   *          corresponding Notebook of this LinkedNotebook.
    * @param linkedNotebook The desired linked notebook.
    * @param publicUserInfo public user information of the user who owns this public
    *          notebook
@@ -127,9 +129,8 @@ public class ENLinkedNotebookHelper {
   public Notebook getCorrespondingNotebook() throws TException, EDAMUserException,
       EDAMSystemException, EDAMNotFoundException {
     if (publicUserInfo != null) {
-      Notebook notebook =
-          sharedClient.getPublicNotebook(publicUserInfo.getUserId(), linkedNotebook
-              .getUri());
+      Notebook notebook = sharedClient.getPublicNotebook(publicUserInfo.getUserId(),
+          linkedNotebook.getUri());
       correspondingNotebookGuid = notebook.getGuid();
       return notebook;
     } else {

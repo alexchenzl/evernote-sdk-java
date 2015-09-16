@@ -21,8 +21,8 @@ import java.util.logging.Logger;
 
 /**
  * This is a sample implementation of ResourceFetcher.
- * 
- * If you are running you application on server, you should use a connection pool to
+ * <p>
+ * If you are running your application on server, you should use a connection pool to
  * implement your own ResourceFetcher. If you are running your application on Android,
  * OkHttpClient maybe is a good choice to implement ResrouceFetcher.
  * 
@@ -164,11 +164,13 @@ public class SimpleResourceFetcher implements ResourceFetcher {
   }
 
   /**
-   * Attempt to get possible filename of resource to download
+   * Attempt to get possible filename of resource to download, it will also try to append
+   * a file extension to the filename if necessary
    * 
    * @param urlString
-   * @param response
-   * @return
+   * @param disposition
+   * @param mime
+   * 
    */
   private String getFileName(String urlString, String disposition, String mime) {
     // extracts file name from header field

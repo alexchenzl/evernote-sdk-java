@@ -20,7 +20,8 @@ import com.evernote.thrift.TException;
 
 /**
  * Provides helper methods to search notes in different note stores.
- * 
+ * <p>
+ * It's NOT thread safe.
  *
  * @author alexchenzl
  */
@@ -45,8 +46,8 @@ public class ENSearchHelper {
    * Searches personal notes in the user's account. It will not search shared notebook or
    * business notebook that the user has joined
    * 
-   * @param search
-   * @return
+   * @param search A {@link SearchParam} object that wraps all parameters for this search
+   * @return A list of NotesMetadataList
    * @throws EDAMUserException
    * @throws EDAMSystemException
    * @throws EDAMNotFoundException
@@ -65,9 +66,9 @@ public class ENSearchHelper {
    * corresponding to either a normal shared notebook or a business notebook the user has
    * joined.
    * 
-   * @param search
-   * @param linkedNotebook
-   * @return
+   * @param search A {@link SearchParam} object that wraps all parameters for this search
+   * @param linkedNotebook The specified LinkedNotebook
+   * @return A list of NotesMetadataList
    * @throws EDAMUserException
    * @throws EDAMSystemException
    * @throws EDAMNotFoundException
@@ -75,7 +76,7 @@ public class ENSearchHelper {
    */
   public List<NotesMetadataList> findNotesInLinkedNotebook(final SearchParam search,
       final LinkedNotebook linkedNotebook) throws EDAMUserException, EDAMSystemException,
-      EDAMNotFoundException, TException {
+          EDAMNotFoundException, TException {
 
     if (search == null || linkedNotebook == null) {
       return null;
@@ -97,8 +98,8 @@ public class ENSearchHelper {
    * Searches notes within those shared notebooks that the user has joined that are
    * business notebooks in the business that the user is currently a member of.
    * 
-   * @param search
-   * @return
+   * @param search A {@link SearchParam} object that wraps all parameters for this search
+   * @return A list of NotesMetadataList
    * @throws EDAMUserException
    * @throws EDAMSystemException
    * @throws EDAMNotFoundException
@@ -115,7 +116,7 @@ public class ENSearchHelper {
 
   private List<NotesMetadataList> findNotesMetadata(SearchParam search,
       NoteStoreClient client, NoteFilter filter) throws EDAMUserException,
-      EDAMSystemException, EDAMNotFoundException, TException {
+          EDAMSystemException, EDAMNotFoundException, TException {
 
     List<NotesMetadataList> result = new ArrayList<NotesMetadataList>();
     final int maxNotes = search.getMaxNotes();
@@ -123,8 +124,8 @@ public class ENSearchHelper {
 
     int remaining = maxNotes - offset;
     while (remaining > 0) {
-      NotesMetadataList notesMetadata =
-          client.findNotesMetadata(filter, offset, maxNotes, search.getResultSpec());
+      NotesMetadataList notesMetadata = client.findNotesMetadata(filter, offset, maxNotes,
+          search.getResultSpec());
       offset = notesMetadata.getStartIndex() + notesMetadata.getNotesSize();
       remaining = notesMetadata.getTotalNotes() - offset;
       result.add(notesMetadata);
@@ -136,8 +137,8 @@ public class ENSearchHelper {
   private NoteStoreClient getBusinessClient() throws TException, EDAMUserException,
       EDAMSystemException {
     if (businessClient == null) {
-      ENBusinessNotebookHelper businessNotebookHelper =
-          clientFactory.createBusinessNotebookHelper();
+      ENBusinessNotebookHelper businessNotebookHelper = clientFactory
+          .createBusinessNotebookHelper();
       businessClient = businessNotebookHelper.getBusinessClient();
     }
     return businessClient;

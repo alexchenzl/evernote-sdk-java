@@ -29,9 +29,9 @@ public interface HTMLElementHandler {
    * 
    * @param element A Jsoup Element object to be processed
    * @param fetcher Resource fetcher
-   * @return true means the application will execute following built-in processes on this
-   *         element after this function returns; false means there is no need to execute
-   *         following built-in processes on this element
+   * @return {@code true} means the application will execute following built-in processes
+   *         on this element after this function returns; false means there is no need to
+   *         execute following built-in processes on this element
    */
   public boolean process(Element element, ResourceFetcher fetcher);
 

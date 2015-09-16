@@ -25,7 +25,7 @@ public class BinaryResource {
   /**
    * convert binary bytes into a string object
    * 
-   * @return
+   * @return A string object
    */
   public String asString() {
     if (charset != null) {

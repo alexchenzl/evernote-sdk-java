@@ -241,7 +241,7 @@ public class ENMLUtil {
    * @param bytes
    * @param mime
    * @param filename
-   * @return
+   * @return A Resource object
    */
   public Resource buildResource(byte[] bytes, String mime, String filename) {
 
@@ -276,7 +276,7 @@ public class ENMLUtil {
    * Checks if a provided string is treated as blank string in ENML
    * 
    * @param str
-   * @return
+   * @return {@code true} if it's a blank string
    */
   public static boolean isBlank(String str) {
     if (str == null) {
@@ -365,8 +365,8 @@ public class ENMLUtil {
    * 
    * Only http, https and file URL protocols are supported in ENML
    * 
-   * @param url
-   * @return
+   * @param urlString
+   * @return {@code true} if it's a valid URL string
    */
   public static boolean isValidURL(String urlString) {
     urlString = cleanString(urlString);

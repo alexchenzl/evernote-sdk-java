@@ -21,7 +21,10 @@ public class DTDAttribute {
   }
 
   /**
-   * {@link http://www.w3.org/TR/1998/REC-xml-19980210#NT-Nmtoken}
+   * 
+   * @see <a href="http://www.w3.org/TR/1998/REC-xml-19980210#NT-Nmtoken">Extensible
+   *      Markup Language (XML) 1.0</a>
+   * 
    */
   public static String NMTOKEN_PATTERN_STR = "[\\w\\.\\-\\:]+";
   public static String NMTOKENS_PATTERN_STR = "[\\w\\.\\-\\:]|";
@@ -52,12 +55,8 @@ public class DTDAttribute {
 
   @Override
   public String toString() {
-    return name
-        + ":"
-        + type
-        + ":"
-        + (enumeratedValues != null ? Arrays.deepToString(enumeratedValues.toArray())
-            : "") + ":" + defaultValueModel;
+    return name + ":" + type + ":" + (enumeratedValues != null ? Arrays.deepToString(
+        enumeratedValues.toArray()) : "") + ":" + defaultValueModel;
   }
 
   public String getName() {

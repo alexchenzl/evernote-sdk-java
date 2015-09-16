@@ -20,6 +20,8 @@ import com.evernote.enml.css.CSSToInlineStyles;
 /**
  * This helper class provides helper methods to build a Note according to html and css
  * content, even to build a note according to a specified web page url.
+ * <p>
+ * It's NOT thread safe.
  * 
  * @author alexchenzl
  */
@@ -37,7 +39,7 @@ public class ENHTMLToENMLHelper {
    *          remote servers.
    * @param handler If you want to add some customized process step before the built-in
    *          HTML to ENML transform steps, you can implement your own
-   *          {@link HTMLElementHandler}
+   *          {@link HTMLElementHandler}. This parameter can be null.
    * 
    */
   public ENHTMLToENMLHelper(ResourceFetcher fetcher, HTMLElementHandler handler) {
@@ -57,7 +59,8 @@ public class ENHTMLToENMLHelper {
    *          into the Note object. If you want to save the whole web page, set selector
    *          to null. For selector syntax, please refer to
    *          http://jsoup.org/cookbook/extracting-data/selector-syntax
-   * @return
+   * @return A Note object built from this web page content. Please notice that it is not
+   *         saved into Evernote service yet.
    * @throws IOException
    */
 
@@ -90,9 +93,10 @@ public class ENHTMLToENMLHelper {
    *          to null. For selector syntax, please refer to
    *          http://jsoup.org/cookbook/extracting-data/selector-syntax
    * @param htmlBaseUrl The base URL of this HTML content
-   * @param cssPariList A list of CSSPair, every CSSPair object includes CSS content and
-   *          the CSS file URL
-   * @return
+   * @param cssPariList A list of {@link CSSPair}, every {@link CSSPair} object includes
+   *          CSS content and its base URL
+   * @return A Note object built from this web page content. Please notice that it is not
+   *         saved into Evernote service yet.
    * 
    */
   public Note buildNoteFromHtml(String html, String selector, String htmlBaseUrl,

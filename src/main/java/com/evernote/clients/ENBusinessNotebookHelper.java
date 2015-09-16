@@ -36,7 +36,9 @@ import com.evernote.edam.type.SharedNotebook;
 import com.evernote.thrift.TException;
 
 /**
- * Provides several helper methods for {@link LinkedNotebook}. * It's NOT thread safe
+ * Provides several helper methods to access business notebooks and notes.
+ * <p>
+ * It's NOT thread safe.
  * 
  * @author alexchenzl
  * 
@@ -48,12 +50,14 @@ public class ENBusinessNotebookHelper {
   private final String businessUserShardId;
 
   /**
-   * @param client The note store client referencing the business note store url.
+   * @param businessClient The note store client referencing the business note store.
+   * @param personalClient The personal note store client
    * @param businessUsername The name of the business user.
    * @param businessUserShardId The shard ID of the business user.
    */
   public ENBusinessNotebookHelper(NoteStoreClient businessClient,
-      NoteStoreClient personalClient, String businessUsername, String businessUserShardId) {
+      NoteStoreClient personalClient, String businessUsername,
+      String businessUserShardId) {
 
     if (businessClient == null || personalClient == null || businessUsername == null
         || businessUserShardId == null) {
@@ -96,8 +100,8 @@ public class ENBusinessNotebookHelper {
    */
   public List<LinkedNotebook> listBusinessNotebooks() throws EDAMUserException,
       EDAMSystemException, TException, EDAMNotFoundException {
-    List<LinkedNotebook> businessNotebooks =
-        new ArrayList<LinkedNotebook>(personalClient.listLinkedNotebooks());
+    List<LinkedNotebook> businessNotebooks = new ArrayList<LinkedNotebook>(personalClient
+        .listLinkedNotebooks());
     Iterator<LinkedNotebook> iterator = businessNotebooks.iterator();
     while (iterator.hasNext()) {
       if (!isBusinessNotebook(iterator.next())) {

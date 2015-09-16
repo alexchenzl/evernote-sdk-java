@@ -86,6 +86,7 @@
         <configuration>
           <show>public</show>
           <nohelp>true</nohelp>
+          <excludePackageNames>com.evernote.edam:com.evernote.thrift:com.evernote.enml.dtd</excludePackageNames>
         </configuration>
         <executions>
           <execution>

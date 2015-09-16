@@ -18,9 +18,8 @@ import com.helger.css.decl.ICSSSelectorMember;
 public class CSSSpecificity implements Comparable<Object> {
 
   private int[] specificity;
-  private static final Pattern CSS_SPECIFICITY_PATTERN =
-      Pattern
-          .compile("\\[\\s*(\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\s*\\]");
+  private static final Pattern CSS_SPECIFICITY_PATTERN = Pattern.compile(
+      "\\[\\s*(\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\s*\\]");
 
   public CSSSpecificity(int[] specificity) {
     this.specificity = specificity;
