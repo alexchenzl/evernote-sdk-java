@@ -7,10 +7,10 @@ import java.io.IOException;
 import java.util.List;
 
 import com.evernote.edam.type.Note;
-import com.evernote.edam.type.NoteAttributes;
-import com.evernote.enml.BinaryResource;
+import com.evernote.edam.type.Resource;
 import com.evernote.enml.ENMLConstants;
 import com.evernote.enml.ENMLUtil;
+import com.evernote.enml.ResourceData;
 import com.evernote.enml.ResourceFetcher;
 import com.evernote.enml.converter.HTMLElementHandler;
 import com.evernote.enml.converter.HTMLToENML;
@@ -52,7 +52,8 @@ public class ENHTMLToENMLHelper {
 
   /**
    * Downloads the web page specified by URL, and converts all external CSS styles into
-   * inline styles, then builds a note based on this web page
+   * inline styles, then builds a note based on this web page. The URL may also points to
+   * a binary resource, such as an image
    * 
    * @param url The URL string of the web page
    * @param selector A jquery-like selector string to find the elements that will be saved
@@ -65,18 +66,36 @@ public class ENHTMLToENMLHelper {
    */
 
   public Note buildNoteFromURL(String url, String selector) throws IOException {
-    BinaryResource resourceData = fetcher.fetchResource(url.toString(), null);
+    ResourceData resourceData = fetcher.fetchResource(url.toString(), null);
     if (resourceData != null) {
-      Note note = buildNoteFromHtml(resourceData.asString(), selector, url, null);
-      if (note != null) {
-        // set source URL of the note
-        NoteAttributes attr = note.getAttributes();
-        if (attr == null) {
-          attr = new NoteAttributes();
+      if ("text/html".equalsIgnoreCase(resourceData.getMime())) {
+        return buildNoteFromHtml(resourceData.asString(), selector, url, null);
+      }
+
+      // If the resource is not html, it will be saved as resource in a new Note
+      byte[] bytes = resourceData.asBinary();
+      if (bytes != null) {
+        Resource res = ENMLUtil.buildResource(bytes,
+            resourceData.getMime(), resourceData.getFilename());
+        String hash = ENMLUtil.bytesToHex(res.getData()
+            .getBodyHash());
+
+        StringBuilder builder = new StringBuilder();
+        builder.append(ENMLConstants.ENML_HEADER);
+        builder.append("<en-note>");
+        builder
+            .append("<en-media type=\"" + res.getMime() + "\" hash=\"" + hash + "\"/>");
+        builder.append("/<en-note>");
+
+        String title = ENMLUtil.cleanString(resourceData.getFilename());
+        if (title.isEmpty()) {
+          title = "New Note";
         }
-        String sourceURL = ENMLUtil.escapeURL(url.toString());
-        attr.setSourceURL(sourceURL);
-        note.setAttributes(attr);
+
+        Note note = new Note();
+        note.setContent(builder.toString());
+        note.setTitle(title);
+        note.addToResources(res);
         return note;
       }
     }
@@ -84,8 +103,11 @@ public class ENHTMLToENMLHelper {
   }
 
   /**
-   * Applies specified CSS to the HTML content as inline styles, then builds a note based
-   * on the generated ENML content
+   * Applies specified CSS to the HTML content and converts them into inline styles, then
+   * builds a note based on the generated ENML content.
+   * <p>
+   * If there's no style sheets specified, the external style sheets and embedded styles
+   * included in this HTML content will be applied to the HTML content.
    * 
    * @param html HTML content to be saved into a Note object
    * @param selector A jquery-like selector string to find the elements that will be saved
@@ -93,8 +115,8 @@ public class ENHTMLToENMLHelper {
    *          to null. For selector syntax, please refer to
    *          http://jsoup.org/cookbook/extracting-data/selector-syntax
    * @param htmlBaseUrl The base URL of this HTML content
-   * @param cssPariList A list of {@link CSSPair}, every {@link CSSPair} object includes
-   *          CSS content and its base URL
+   * @param cssPariList A list of {@link CSSPair} object, each item includes both CSS
+   *          content and its base URL.
    * @return A Note object built from this web page content. Please notice that it is not
    *         saved into Evernote service yet.
    * 
@@ -106,22 +128,16 @@ public class ENHTMLToENMLHelper {
     }
 
     CSSToInlineStyles cssHandler = new CSSToInlineStyles(fetcher);
-    if (cssPariList == null || cssPariList.isEmpty()) {
-      html = cssHandler.processHTML(html, htmlBaseUrl);
-    } else {
-      cssHandler.clearStyleSheet();
-      for (CSSPair item : cssPariList) {
-        cssHandler.addStyleSheet(item.getCss(), item.getUrl());
-      }
-      html = cssHandler.processHTMLWithSpecifiedCSS(html, htmlBaseUrl);
-    }
-
     HTMLToENML converter = new HTMLToENML(fetcher, handler);
+    html = cssHandler.processHTML(html, htmlBaseUrl, cssPariList);
     if (converter.convert(html, selector, htmlBaseUrl)) {
       Note note = new Note();
       note.setContent(ENMLConstants.ENML_HEADER + "<en-note>" + converter.getContent()
           + "</en-note>");
       note.setTitle(converter.getTitle());
+      if (note.getTitle() == null || note.getTitle().isEmpty()) {
+        note.setTitle("New Note");
+      }
       note.setResources(converter.getResources());
       return note;
     }

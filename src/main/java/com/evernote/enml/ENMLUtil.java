@@ -23,14 +23,13 @@
  */
 package com.evernote.enml;
 
-import java.net.URI;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -61,42 +60,13 @@ public class ENMLUtil {
 
   public static final Pattern URL_PATTERN = Pattern.compile("([^:]*):(.*)");
 
-  /**
-   * Defines mime types used widely in ENML
-   */
-  public static final String MIME_PNG = "image/png";
-  public static final String MIME_GIF = "image/gif";
-  public static final String MIME_JPEG = "image/jpeg";
-  public static final String MIME_TIFF = "image/tiff";
-  public static final String MIME_JPG = "image/jpg";
-  public static final String MIME_PJPEG = "image/pjpeg";
-  public static final String MIME_BMP = "image/bmp";
-  public static final String MIME_WAV = "audio/wav";
-  public static final String MIME_VND_WAVE = "audio/vnd.wave";
-  public static final String MIME_MP3 = "audio/mpeg";
-  public static final String MIME_AMR = "audio/amr";
-  public static final String MIME_PDF = "application/pdf";
-
-  private static Map<String, String> mimeExtMap = new HashMap<String, String>();
+  public static final Set<String> PERMITTED_SCHEMES = new HashSet<String>();
 
   static {
-    mimeExtMap.put(MIME_PNG, "png");
-    mimeExtMap.put(MIME_GIF, "gif");
-    mimeExtMap.put(MIME_JPEG, "jpg");
-    mimeExtMap.put(MIME_JPG, "jpg");
-    mimeExtMap.put(MIME_PJPEG, "jpg");
-    mimeExtMap.put(MIME_TIFF, "tif");
-    mimeExtMap.put(MIME_BMP, "bmp");
-
-    mimeExtMap.put(MIME_WAV, "wav");
-    mimeExtMap.put(MIME_VND_WAVE, "wav");
-    mimeExtMap.put(MIME_MP3, "mp3");
-    mimeExtMap.put(MIME_AMR, "amr");
-    mimeExtMap.put(MIME_PDF, "pdf");
-  }
-
-  public static String getPossibleExtension(String mime) {
-    return mimeExtMap.get(mime);
+    // only http, https and file schemes are permitted in ENML
+    PERMITTED_SCHEMES.add("http");
+    PERMITTED_SCHEMES.add("https");
+    PERMITTED_SCHEMES.add("file");
   }
 
   /**
@@ -243,7 +213,7 @@ public class ENMLUtil {
    * @param filename
    * @return A Resource object
    */
-  public Resource buildResource(byte[] bytes, String mime, String filename) {
+  public static Resource buildResource(byte[] bytes, String mime, String filename) {
 
     if (bytes != null && mime != null) {
       Data data = ENMLUtil.bytesToData(bytes);
@@ -273,19 +243,6 @@ public class ENMLUtil {
   }
 
   /**
-   * Checks if a provided string is treated as blank string in ENML
-   * 
-   * @param str
-   * @return {@code true} if it's a blank string
-   */
-  public static boolean isBlank(String str) {
-    if (str == null) {
-      return true;
-    }
-    return isBlank(new StringBuilder(str));
-  }
-
-  /**
    * Uses {@link Character#isSpaceChar} in addition to {@link Character#isWhitespace}.
    *
    * Character.isWhitespace covers things like \t \n and other Unicode control characters
@@ -295,17 +252,17 @@ public class ENMLUtil {
    * And for some reason, Character.isSpaceChar isn't true for tabs so we really do need
    * both. http://stackoverflow.com/a/1060759.
    *
-   * @param sb
+   * @param str
    * @return is the string composed of only whitespace or control characters
    */
-  public static boolean isBlank(StringBuilder sb) {
+  public static boolean isBlank(String str) {
     int length;
-    if (sb == null || (length = sb.length()) == 0) {
+    if (str == null || (length = str.length()) == 0) {
       return true;
     }
 
     for (int offset = 0; offset < length;) {
-      final int codepoint = sb.codePointAt(offset);
+      final int codepoint = str.codePointAt(offset);
 
       if (!saneIsWhitespace(codepoint)) {
         return false;
@@ -366,9 +323,9 @@ public class ENMLUtil {
    * Only http, https and file URL protocols are supported in ENML
    * 
    * @param urlString
-   * @return {@code true} if it's a valid URL string
+   * @return {@code true} if it's an acceptable URL string
    */
-  public static boolean isValidURL(String urlString) {
+  public static boolean isAcceptableURL(String urlString) {
     urlString = cleanString(urlString);
     if (urlString == null || urlString.startsWith("data:text")) {
       return false;
@@ -378,7 +335,7 @@ public class ENMLUtil {
       return false;
     }
     String scheme = m.group(1).toLowerCase();
-    if (scheme.contains("script")) {
+    if (scheme.contains("script") || !PERMITTED_SCHEMES.contains(scheme)) {
       return false;
     }
 
@@ -388,30 +345,6 @@ public class ENMLUtil {
     } catch (Exception badURLCheckWithProvidedScheme) {
       return false;
     }
-  }
-
-  /**
-   * 
-   * replaces unsafe ASCII characters with a "%" followed by hexadecimal digits in a URL's
-   * query string.
-   * 
-   * For example: "https://www.evernote.com/hello word" will be converted to
-   * "http://www.evernote.com/hello%20word"
-   * 
-   * 
-   */
-  public static String escapeURL(String urlString) {
-    try {
-      if (urlString != null) {
-        URL url = new URL(urlString.trim());
-        URI uri = new URI(url.getProtocol(), url.getUserInfo(), url.getHost(), url
-            .getPort(), url.getPath(), url.getQuery(), url.getRef());
-        return uri.toASCIIString();
-      }
-    } catch (Exception e) {
-      // It should be a wrong URL string
-    }
-    return null;
   }
 
 }

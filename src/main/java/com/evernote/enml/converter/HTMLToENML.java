@@ -39,14 +39,14 @@ import org.jsoup.nodes.Attribute;
 import org.jsoup.nodes.Attributes;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Entities;
+import org.jsoup.nodes.Node;
 import org.jsoup.select.Elements;
 
-import com.evernote.edam.type.Data;
 import com.evernote.edam.type.Resource;
-import com.evernote.edam.type.ResourceAttributes;
-import com.evernote.enml.BinaryResource;
 import com.evernote.enml.ENMLConstants;
 import com.evernote.enml.ENMLUtil;
+import com.evernote.enml.ResourceData;
 import com.evernote.enml.ResourceFetcher;
 import com.evernote.enml.dtd.DTDAttribute;
 import com.evernote.enml.dtd.DTDAttribute.AttributeType;
@@ -69,6 +69,9 @@ public class HTMLToENML {
   private List<Resource> resourceList = null;
   // extracted HTML title
   private String title;
+  // extracted keywords
+  private String keywords;
+
   // generated ENML content
   private String content;
 
@@ -78,30 +81,30 @@ public class HTMLToENML {
   private static final Pattern PATTERN_DISPLAY_NONE = Pattern.compile(
       "display\\s*:\\s*none");
 
-  // some tags are visible but not permitted in ENML, try to convert them to DIV tags
+  // some tags are visible but not permitted in ENML, try to convert them to div tags
   // so that the content in these tags may be kept in the generated ENML content
-  protected static Set<String> toDIVTagSet = new HashSet<String>();
+  protected static final Set<String> TO_DIV_TAGS = new HashSet<String>();
 
   // some tags may need to be converted to span tags
-  protected static Set<String> toSpanTagSet = new HashSet<String>();
+  protected static final Set<String> TO_SPAN_TAGS = new HashSet<String>();
 
   static {
-    toDIVTagSet.add("section");
-    toDIVTagSet.add("fieldset");
-    toDIVTagSet.add("main");
-    toDIVTagSet.add("article");
-    toDIVTagSet.add("aside");
-    toDIVTagSet.add("summary");
-    toDIVTagSet.add("details");
-    toDIVTagSet.add("figcaption");
-    toDIVTagSet.add("figure");
-    toDIVTagSet.add("header");
-    toDIVTagSet.add("footer");
-    toDIVTagSet.add("nav");
-    toDIVTagSet.add("form");
+    TO_DIV_TAGS.add("section");
+    TO_DIV_TAGS.add("fieldset");
+    TO_DIV_TAGS.add("main");
+    TO_DIV_TAGS.add("article");
+    TO_DIV_TAGS.add("aside");
+    TO_DIV_TAGS.add("summary");
+    TO_DIV_TAGS.add("details");
+    TO_DIV_TAGS.add("figcaption");
+    TO_DIV_TAGS.add("figure");
+    TO_DIV_TAGS.add("header");
+    TO_DIV_TAGS.add("footer");
+    TO_DIV_TAGS.add("nav");
+    TO_DIV_TAGS.add("form");
 
-    toSpanTagSet.add("mark");
-    toSpanTagSet.add("label");
+    TO_SPAN_TAGS.add("mark");
+    TO_SPAN_TAGS.add("label");
   }
 
   /**
@@ -134,7 +137,8 @@ public class HTMLToENML {
   }
 
   /**
-   * Get extracted title from the HTML head tag. It may be null.
+   * Get extracted title from the HTML head tag. It may be null, but will not be an empty
+   * string
    *
    * @return The title string
    */
@@ -143,14 +147,35 @@ public class HTMLToENML {
   }
 
   /**
-   * Get generated ENML content.
+   * Get extracted keywords from the HTML document. It may be null. Multiple keywords are
+   * separated by a comma.
+   * <p>
+   * By default, the keywords are extracted from the meta tag with the "keywords"
+   * property. Developers can use their own methods to extract keywords by implementing
+   * {@link HTMLElementHandler}
    * 
-   * This content doesn't include ENML header and ENML root tag en-note.
+   * @return The keywords string
+   */
+  public String getKeywords() {
+    return keywords;
+  }
+
+  /**
+   * Get generated ENML content. This content doesn't include ENML header and ENML root
+   * tag en-note.
    * 
    * @return The ENML string content
    */
   public String getContent() {
     return content;
+  }
+
+  private void extractKeywords(Document doc) {
+    Elements metaKeywords = doc.select("meta[property=keywords]");
+    if (metaKeywords != null) {
+      keywords = metaKeywords.attr("content");
+      keywords = ENMLUtil.cleanString(keywords);
+    }
   }
 
   /**
@@ -176,44 +201,65 @@ public class HTMLToENML {
     resourceList = new ArrayList<Resource>();
 
     Document doc = Jsoup.parse(html, baseURLStr);
+    doc.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
+    doc.outputSettings().escapeMode(Entities.EscapeMode.xhtml);
     doc.outputSettings().prettyPrint(false);
 
     title = doc.title();
     if (title != null) {
       title = ENMLUtil.cleanString(title);
+      if (title.isEmpty()) {
+        title = null;
+      }
     }
 
     if (customizedHandler != null) {
       customizedHandler.initialize();
+      keywords = customizedHandler.extractKeywords(doc);
+    }
+
+    if (keywords == null || keywords.isEmpty()) {
+      extractKeywords(doc);
     }
 
     if (selector == null || selector.isEmpty()) {
       Element bodyElement = doc.body();
       if (bodyElement != null) {
-        processElement(bodyElement);
-        content = bodyElement.toString();
-        return true;
+        if (processElement(bodyElement)) {
+          removeComments(bodyElement);
+          content = bodyElement.toString();
+          return true;
+        }
       }
       return false;
     }
 
     Elements elts = doc.select(selector);
-    if (elts != null) {
+    if (elts != null && elts.size() > 0) {
       StringBuilder builder = new StringBuilder();
       for (int i = 0; i < elts.size(); i++) {
         Element elt = elts.get(i);
-        processElement(elt);
-        builder.append(elt.toString());
+        if (processElement(elt)) {
+          removeComments(elt);
+          builder.append(elt.toString());
+        }
       }
-      content = builder.toString();
-      return true;
+      if (builder.length() > 0) {
+        content = builder.toString();
+        return true;
+      }
     }
     return false;
   }
 
-  protected void processElement(Element element) {
+  private boolean handleFailure(Element element) {
+    element.remove();
+    return false;
+  }
+
+  protected boolean processElement(Element element) {
     if (element == null) {
-      return;
+      return false;
     }
     // tag names in ENML must be all lowercase
     element.tagName(element.tagName().toLowerCase().trim());
@@ -221,21 +267,20 @@ public class HTMLToENML {
     // call user defined element handler here
     if (customizedHandler != null) {
       if (!customizedHandler.process(element, fetcher)) {
-        return;
+        return handleFailure(element);
       }
     }
 
     // convert some special tags to ENML tags
     // for example: body --> div, img --> en-media
     if (!transformSpecialTags(element)) {
-      return;
+      return handleFailure(element);
     }
 
     // remove disallowed elements
     SimpleENMLDTD dtd = SimpleENMLDTD.getInstance();
     if (!dtd.isElementAllowed(element.tagName())) {
-      element.remove();
-      return;
+      return handleFailure(element);
     }
 
     // clean attributes
@@ -243,13 +288,38 @@ public class HTMLToENML {
 
     // process children
     Elements children = element.children();
-    if (children != null) {
+    if (children.size() > 0) {
+      int remainedChildren = 0;
       Iterator<Element> it = children.iterator();
       while (it.hasNext()) {
         Element element2 = it.next();
         if (element2 != null) {
-          processElement(element2);
+          if (processElement(element2)) {
+            remainedChildren++;
+          }
         }
+      }
+
+      // If all children are removed, and the content of this element is empty, then
+      // remove this element and return false;
+      if (remainedChildren == 0) {
+        String text = element.text();
+        if (text == null || text.trim().isEmpty()) {
+          return handleFailure(element);
+        }
+      }
+    }
+    return true;
+  }
+
+  private static void removeComments(Node node) {
+    for (int i = 0; i < node.childNodes().size();) {
+      Node child = node.childNode(i);
+      if (child.nodeName().equals("#comment")) {
+        child.remove();
+      } else {
+        removeComments(child);
+        i++;
       }
     }
   }
@@ -257,8 +327,8 @@ public class HTMLToENML {
   /**
    * 
    * @param element
-   * @return {@code true} if this element needs further processing, false means the
-   *         element is removed
+   * @return {@code true} if this element needs further processing, false means this
+   *         element should be removed from ENML content
    */
   protected boolean transformSpecialTags(Element element) {
 
@@ -268,16 +338,16 @@ public class HTMLToENML {
       style = style.toLowerCase();
       Matcher matcher = PATTERN_DISPLAY_NONE.matcher(style);
       if (matcher.find()) {
-        element.remove();
         return false;
       }
     }
 
     String elementName = element.tagName();
+
     // convert some tags to div or span
-    if (toDIVTagSet.contains(elementName)) {
+    if (TO_DIV_TAGS.contains(elementName)) {
       element.tagName(ENMLConstants.HTML_DIV_TAG);
-    } else if (toSpanTagSet.contains(elementName)) {
+    } else if (TO_SPAN_TAGS.contains(elementName)) {
       element.tagName(ENMLConstants.HTML_SPAN_TAG);
     } else if (elementName.equals(ENMLConstants.HTML_BODY)) {
       element.tagName(ENMLConstants.HTML_DIV_TAG);
@@ -288,8 +358,7 @@ public class HTMLToENML {
       element.removeAttr("type");
     } else if (elementName.equals(ENMLConstants.HTML_IMG_TAG)) {
       String imgUrl = element.absUrl(ENMLConstants.HTML_IMG_SRC_ATTR);
-      if (ENMLUtil.isValidURL(imgUrl)) {
-        imgUrl = ENMLUtil.escapeURL(imgUrl);
+      if (ENMLUtil.isAcceptableURL(imgUrl)) {
         if (resourceList == null) {
           element.attr(ENMLConstants.HTML_IMG_SRC_ATTR, imgUrl);
           return true;
@@ -297,23 +366,22 @@ public class HTMLToENML {
 
         if (!fetcher.isAllowedURL(imgUrl)) {
           logger.log(Level.INFO, "Prohibited image url " + imgUrl);
-          element.remove();
           return false;
         }
 
-        BinaryResource binaryResource;
+        ResourceData resData;
         try {
-          binaryResource = fetcher.fetchResource(imgUrl, null);
+          resData = fetcher.fetchResource(imgUrl, null);
         } catch (Exception e) {
           // If it fails, remove this element
-          binaryResource = null;
-          logger.log(Level.WARNING, "Failed to get resource " + imgUrl + " for reason: "
-              + e.getMessage());
+          resData = null;
+          logger.log(Level.WARNING, "Failed to get resource " + imgUrl + " for reason: ",
+              e);
         }
 
-        if (binaryResource != null) {
-          Resource res = buildResource(binaryResource.getBytes(), binaryResource
-              .getMime(), binaryResource.getFilename());
+        if (resData != null && resData.getBytes() != null && resData.getMime() != null) {
+          Resource res = ENMLUtil.buildResource(resData.getBytes(), resData
+              .getMime(), resData.getFilename());
           element.tagName(ENMLConstants.EN_MEDIA_TAG);
           element.attr(ENMLConstants.EN_MEDIA_ATTR_TYPE, res.getMime());
           element.attr(ENMLConstants.EN_MEDIA_ATTR_HASH, ENMLUtil.bytesToHex(res.getData()
@@ -321,13 +389,19 @@ public class HTMLToENML {
           element.removeAttr(ENMLConstants.HTML_IMG_SRC_ATTR);
           resourceList.add(res);
         } else {
-          element.remove();
           return false;
         }
       } else {
-        element.remove();
         return false;
       }
+    } else if (elementName.equals(ENMLConstants.HTML_ANCHOR_TAG)) {
+      String href = element.absUrl(ENMLConstants.HTML_ANCHOR_HREF_ATTR);
+      if (ENMLUtil.isAcceptableURL(href)) {
+        element.attr(ENMLConstants.HTML_ANCHOR_HREF_ATTR, href);
+      } else {
+        return false;
+      }
+
     }
     return true;
   }
@@ -368,15 +442,6 @@ public class HTMLToENML {
           }
         }
 
-        if (attrName.equalsIgnoreCase(ENMLConstants.HTML_ANCHOR_HREF_ATTR) || attrName
-            .equalsIgnoreCase(ENMLConstants.HTML_IMG_SRC_ATTR)) {
-          if (ENMLUtil.isValidURL(attrValue)) {
-            attr.setValue(ENMLUtil.escapeURL(attrValue));
-          } else {
-            attrs.remove(attrName);
-            continue;
-          }
-        }
         attrNameSet.add(attrName);
       }
     }
@@ -400,23 +465,6 @@ public class HTMLToENML {
       }
     }
 
-  }
-
-  private Resource buildResource(byte[] bytes, String mime, String filename) {
-
-    if (bytes != null && mime != null) {
-      Data data = ENMLUtil.bytesToData(bytes);
-      Resource res = new Resource();
-      res.setData(data);
-      res.setMime(mime);
-      if (filename != null) {
-        ResourceAttributes attr = new ResourceAttributes();
-        attr.setFileName(filename);
-        res.setAttributes(attr);
-      }
-      return res;
-    }
-    return null;
   }
 
 }

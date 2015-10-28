@@ -19,10 +19,12 @@ import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.evernote.edam.limits.Constants;
+
 /**
  * This is a sample implementation of ResourceFetcher.
  * <p>
- * If you are running your application on server, you should use a connection pool to
+ * If you are running your application on a server, you should use a connection pool to
  * implement your own ResourceFetcher. If you are running your application on Android,
  * OkHttpClient maybe is a good choice to implement ResrouceFetcher.
  * 
@@ -97,7 +99,7 @@ public class SimpleResourceFetcher implements ResourceFetcher {
     return conn;
   }
 
-  public BinaryResource fetchResource(String resourceURL,
+  public ResourceData fetchResource(String resourceURL,
       Map<String, String> customHeaders) throws IOException {
 
     HttpURLConnection conn = null;
@@ -118,15 +120,19 @@ public class SimpleResourceFetcher implements ResourceFetcher {
         int length = conn.getContentLength();
         in = new BufferedInputStream(conn.getInputStream());
         byte[] result = readInputBytes(resourceURL, in, length);
+        if (result != null) {
 
-        String contentType = conn.getContentType();
-        String mime = parseMime(contentType);
-        String charset = parseCharset(contentType);
+          String contentType = conn.getContentType();
+          String mime = parseMime(contentType);
+          String charset = parseCharset(contentType);
 
-        String disposition = conn.getHeaderField("Content-Disposition");
-        String filename = getFileName(resourceURL, disposition, mime);
+          String disposition = conn.getHeaderField("Content-Disposition");
+          String filename = getFileName(resourceURL, disposition, mime);
 
-        return new BinaryResource(result, mime, charset, filename);
+          ResourceData resData = new ResourceData(result, mime, filename);
+          resData.setCharset(charset);
+          return resData;
+        }
       } else {
         logger.log(Level.WARNING, "Error " + code + " Failed to fetch resource "
             + resourceURL);
@@ -140,6 +146,15 @@ public class SimpleResourceFetcher implements ResourceFetcher {
     return null;
   }
 
+  /**
+   * 
+   * MIME types returned by servers maybe are wrong, validation is required in a real
+   * environment.
+   * <p>
+   * The mime returned by servers maybe are incorrect, you should validate them before
+   * using them.
+   *
+   */
   private String parseMime(String contentType) {
     String result = contentType;
     if (result != null) {
@@ -165,7 +180,9 @@ public class SimpleResourceFetcher implements ResourceFetcher {
 
   /**
    * Attempt to get possible filename of resource to download, it will also try to append
-   * a file extension to the filename if necessary
+   * a file extension to the filename if necessary. The returned filename maybe has no
+   * extension.
+   * 
    * 
    * @param urlString
    * @param disposition
@@ -173,43 +190,40 @@ public class SimpleResourceFetcher implements ResourceFetcher {
    * 
    */
   private String getFileName(String urlString, String disposition, String mime) {
-    // extracts file name from header field
+
+    // Try filename from disposition header
     if (disposition != null) {
-      int index = disposition.indexOf("filename=");
-      if (index > 0) {
-        String filename = disposition.substring(index + 10, disposition.length() - 1);
-        return filename;
+      String[] items = disposition.split(";");
+      for (String item : items) {
+        item = item.trim();
+        if (item.startsWith("filename=")) {
+          return item.substring(10, item.length() - 1);
+        }
       }
     }
 
-    // try to compose a filename according to the urlString
+    // Try to compose a filename based on URL
     try {
       URL url = new URL(urlString);
       String filename = url.getPath();
       int begin = filename.lastIndexOf("/");
       int end = filename.indexOf("?");
-      if (begin > 0) {
+      if (begin >= 0) {
         if (end > 0 && end > begin) {
           filename = filename.substring(begin + 1, end);
         } else {
           filename = filename.substring(begin + 1);
         }
       }
-
-      if (filename.indexOf(".") < 0) {
-        String ext = ENMLUtil.getPossibleExtension(mime);
-        if (ext != null) {
-          filename += "." + ext;
-        }
-      }
       return filename;
     } catch (MalformedURLException e) {
-      // it should not happen
+      // it should never happen
     }
     return null;
   }
 
-  public boolean fetchResource(String resourceURL, Map<String, String> customHeaders,
+  public boolean fetchResourceAsFile(String resourceURL,
+      Map<String, String> customHeaders,
       String filename) throws IOException {
 
     if (resourceURL == null || filename == null) {
@@ -325,8 +339,14 @@ public class SimpleResourceFetcher implements ResourceFetcher {
     return result;
   }
 
+  /*
+   * 
+   * The max body size should be less than the max total size of a Note in a premium
+   * account.
+   * 
+   */
   protected int getBodyMaxSize() {
-    return Integer.MAX_VALUE;
+    return Constants.EDAM_NOTE_SIZE_MAX_PREMIUM;
   }
 
   public int getConnectTimeout() {

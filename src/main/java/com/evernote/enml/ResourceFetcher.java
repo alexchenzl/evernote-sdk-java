@@ -33,7 +33,7 @@ public interface ResourceFetcher {
    * @throws IOException
    * @throws ClientProtocolException
    */
-  public BinaryResource fetchResource(String resourceURL,
+  public ResourceData fetchResource(String resourceURL,
       Map<String, String> customHeaders) throws IOException;
 
   /**
@@ -46,7 +46,8 @@ public interface ResourceFetcher {
    * @throws IOException
    * @throws ClientProtocolException
    */
-  public boolean fetchResource(String resourceURL, Map<String, String> customHeaders,
+  public boolean fetchResourceAsFile(String resourceURL,
+      Map<String, String> customHeaders,
       String filename) throws IOException;
 
 }

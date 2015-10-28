@@ -21,6 +21,7 @@ import java.security.MessageDigest;
 import java.util.Iterator;
 import java.util.List;
 
+import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
 import com.evernote.auth.EvernoteAuth;
@@ -95,7 +96,8 @@ public class EDAMDemo {
     if ("your developer token".equals(token)) {
       System.err.println("Please fill in your developer token");
       System.err
-          .println("To get a developer token, go to https://sandbox.evernote.com/api/DeveloperToken.action");
+          .println(
+              "To get a developer token, go to https://sandbox.evernote.com/api/DeveloperToken.action");
       return;
     }
 
@@ -393,7 +395,8 @@ public class EDAMDemo {
     return list;
   }
 
-  private Note createNoteInLinkedNotebook(LinkedNotebook linkedNotebook) throws Exception {
+  private Note createNoteInLinkedNotebook(LinkedNotebook linkedNotebook)
+      throws Exception {
 
     ENLinkedNotebookHelper helper = factory.createLinkedNotebookHelper(linkedNotebook);
     if (helper.isNotebookWritable()) {
@@ -420,8 +423,9 @@ public class EDAMDemo {
     LinkedNotebook linkedNotebook = businessHelper.createBusinessNotebook(notebook);
 
     System.out
-        .println("Successfully created a new business notebook, its LinkedNotebook GUID is "
-            + linkedNotebook.getGuid());
+        .println(
+            "Successfully created a new business notebook, its LinkedNotebook GUID is "
+                + linkedNotebook.getGuid());
     System.out.println();
     return linkedNotebook;
   }
@@ -524,19 +528,23 @@ public class EDAMDemo {
     public boolean process(Element element, ResourceFetcher fetcher) {
       String className = element.className();
       if (className != null) {
-        // Class top and bottom use :after to clear float, we can add a div tag to
-        // implement the same effect in ENML
+        // Class top and bottom use :after to clear float, but it can not be handled by
+        // the converter. So we can add a div tag to implement the same effect in ENML
         if (className.equals("top") || className.equals("bottom")) {
           element.after("<div style=\"clear:both;\"></div>");
         } else if (className.contains("premium-callout")) {
-          // We also want to remove the premium advertisement in this page
-          element.remove();
-          // False means the element doesn't need further process
+          // False means the element should be removed from the DOM tree, but do NOT
+          // remove it here
           return false;
         }
       }
       // True means this element needs further process
       return true;
+    }
+
+    public String extractKeywords(Document doc) {
+      // TODO Auto-generated method stub
+      return null;
     }
   }
 

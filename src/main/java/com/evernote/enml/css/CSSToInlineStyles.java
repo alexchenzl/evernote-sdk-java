@@ -16,12 +16,13 @@ import java.util.logging.Logger;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Entities;
 import org.jsoup.select.Elements;
 import org.jsoup.select.Selector.SelectorParseException;
 
-import com.evernote.enml.BinaryResource;
 import com.evernote.enml.ENMLConstants;
 import com.evernote.enml.ENMLUtil;
+import com.evernote.enml.ResourceData;
 import com.evernote.enml.ResourceFetcher;
 import com.helger.css.ECSSVersion;
 import com.helger.css.decl.CSSDeclaration;
@@ -44,7 +45,7 @@ import com.helger.css.writer.CSSWriterSettings;
  * Converts an HTML document with external and embedded styles into an HTML document with
  * inline styles. Pseudo class and pseudo element can not be handled with this tool.
  * 
- * The instance is not thread safe.
+ * The instance is NOT thread safe.
  * 
  */
 public class CSSToInlineStyles {
@@ -55,9 +56,9 @@ public class CSSToInlineStyles {
   // fetcher is used to download CSS files
   private final ResourceFetcher fetcher;
 
-  private List<CascadingStyleSheet> allStyleSheets;
+  private List<CascadingStyleSheet> styleSheetList;
   // Every style sheet has its own base URL
-  private List<URL> allStyleSheetsBaseURLs;
+  private List<URL> styleSheetBaseURLList;
 
   // For temporary use when processing HTML, key is the value of the attribute
   // DATA_EN_TAGIDX
@@ -86,29 +87,20 @@ public class CSSToInlineStyles {
   }
 
   /**
-   * Downloads external style sheets in this HTML content, then converts them and embedded
-   * styles into inline styles
-   *
-   * @param html
+   * Extracts CSS file links from HTML head node, then downloads them and parses them as
+   * CascadingStyleSheet objects. If there are embedded styles, they will also be parsed.
+   * 
+   * @param doc
    * @param baseURLStr
-   * @return The result HTML string
    */
-  public String processHTML(String html, String baseURLStr) {
+  private void downloadStyleSheetsFromHead(Document doc, String baseURLStr) {
 
-    Document doc = Jsoup.parse(html, baseURLStr);
-    doc.outputSettings().prettyPrint(false);
-
-    allStyleSheets = null;
-    allStyleSheetsBaseURLs = null;
-
-    // add external and embedded styles
     Element head = doc.head();
     Elements children = head.children();
     if (children != null) {
       Iterator<Element> it = children.iterator();
       while (it.hasNext()) {
         Element elt = it.next();
-
         String tagName = elt.tagName().toLowerCase();
         if (tagName.equals(ENMLConstants.HTML_LINK_TAG)) {
           String rel = elt.attr("rel");
@@ -124,45 +116,58 @@ public class CSSToInlineStyles {
       }
     }
 
-    // process stylesheet objects in the order that they were loaded
-    if (allStyleSheets != null) {
-      for (int i = 0; i < allStyleSheets.size(); i++) {
-        applyStylesFromCascadingStyleSheet(doc, i);
-      }
-    }
-
-    cascadingInfos.clear();
-    tagIdx = 0;
-    return doc.toString();
   }
 
   /**
-   * Apply style sheets that are added through {@link #addStyleSheet(String, String)} to
-   * the HTML content, converting them into inline styles.
-   *
-   * The external styles and embedded styles within the head section of this HTML content
-   * will be ignored, but original inline styles will be kept.
+   * Downloads external style sheets in this HTML content, then converts them and embedded
+   * styles into inline styles
    *
    * @param html
    * @param baseURLStr
    * @return The result HTML string
    */
-  public String processHTMLWithSpecifiedCSS(String html, String baseURLStr) {
+  public String processHTML(String html, String baseURLStr) {
+    return processHTML(html, baseURLStr, null);
+  }
 
-    if (allStyleSheets == null || allStyleSheets.size() == 0) {
-      return html;
+  /**
+   * Apply specified style sheets to the HTML content, converting them into inline styles.
+   * The external styles and embedded styles within the head section of this HTML content
+   * will be ignored, but original inline styles will be kept.
+   * <p>
+   * If there's no style sheets specified, the external style sheets and embedded styles
+   * included in this HTML content will be applied to the HTML content.
+   * 
+   *
+   * @param html The html content to be processed
+   * @param baseURLStr The base URL of this html content
+   * @param cssPariList A list of {@link CSSPair} object, each item includes both CSS
+   *          content and its base URL.
+   * @return The result HTML string
+   */
+  public String processHTML(String html, String baseURLStr, List<CSSPair> cssPariList) {
+
+    resetTempData();
+    clearStyleSheet();
+
+    Document doc = parseHTML(html, baseURLStr);
+    if (doc == null) {
+      return null;
     }
 
-    Document doc = Jsoup.parse(html, baseURLStr);
-    doc.outputSettings().prettyPrint(false);
-
-    // process style sheet objects in the order that they were loaded
-    for (int i = 0; i < allStyleSheets.size(); i++) {
-      applyStylesFromCascadingStyleSheet(doc, i);
+    if (cssPariList == null || cssPariList.isEmpty()) {
+      downloadStyleSheetsFromHead(doc, baseURLStr);
+    } else {
+      for (CSSPair item : cssPariList) {
+        addStyleSheet(item.getCss(), item.getUrl());
+      }
     }
 
-    cascadingInfos.clear();
-    tagIdx = 0;
+    if (styleSheetList != null) {
+      for (int i = 0; i < styleSheetList.size(); i++) {
+        applyStylesFromCascadingStyleSheet(doc, i);
+      }
+    }
     return doc.toString();
   }
 
@@ -171,8 +176,25 @@ public class CSSToInlineStyles {
    *
    */
   public void clearStyleSheet() {
-    allStyleSheets = null;
-    allStyleSheetsBaseURLs = null;
+    styleSheetList = null;
+    styleSheetBaseURLList = null;
+  }
+
+  protected void resetTempData() {
+    cascadingInfos.clear();
+    tagIdx = 0;
+  }
+
+  protected Document parseHTML(String html, String baseURLStr) {
+
+    if (html == null) {
+      return null;
+    }
+    Document doc = Jsoup.parse(html, baseURLStr);
+    doc.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
+    doc.outputSettings().escapeMode(Entities.EscapeMode.xhtml);
+    doc.outputSettings().prettyPrint(false);
+    return doc;
   }
 
   /**
@@ -182,18 +204,18 @@ public class CSSToInlineStyles {
    * @param baseUrlStr
    * @return {@code true} if it's successful to add the style sheet content
    */
-  public boolean addStyleSheet(String styleSheetContent, String baseUrlStr) {
+  protected boolean addStyleSheet(String styleSheetContent, String baseUrlStr) {
 
     if (styleSheetContent == null || styleSheetContent.isEmpty()) {
       return false;
     }
 
-    if (allStyleSheets == null) {
-      allStyleSheets = new ArrayList<CascadingStyleSheet>();
+    if (styleSheetList == null) {
+      styleSheetList = new ArrayList<CascadingStyleSheet>();
     }
 
-    if (allStyleSheetsBaseURLs == null) {
-      allStyleSheetsBaseURLs = new ArrayList<URL>();
+    if (styleSheetBaseURLList == null) {
+      styleSheetBaseURLList = new ArrayList<URL>();
     }
 
     CascadingStyleSheet sheet = CSSReader.readFromString(styleSheetContent, ENMLUtil.UTF8,
@@ -228,8 +250,8 @@ public class CSSToInlineStyles {
           }
         }
       }
-      allStyleSheets.add(sheet);
-      allStyleSheetsBaseURLs.add(baseURL);
+      styleSheetList.add(sheet);
+      styleSheetBaseURLList.add(baseURL);
       return true;
     }
     return false;
@@ -285,8 +307,8 @@ public class CSSToInlineStyles {
 
   private void applyStylesFromCascadingStyleSheet(Document doc, int sheetIndex) {
 
-    CascadingStyleSheet sheet = allStyleSheets.get(sheetIndex);
-    URL baseURL = allStyleSheetsBaseURLs.get(sheetIndex);
+    CascadingStyleSheet sheet = styleSheetList.get(sheetIndex);
+    URL baseURL = styleSheetBaseURLList.get(sheetIndex);
 
     List<ICSSTopLevelRule> rules = sheet.getAllRules();
     int ruleIndex = 0;
@@ -317,13 +339,11 @@ public class CSSToInlineStyles {
 
             Elements elts = null;
             try {
-              elts = doc.body().select(selString);
+              elts = doc.select(selString);
             } catch (Exception e) {
               // Jsoup failed to execute this selector, just jump to next one;
               logger.log(Level.WARNING, "Jsoup failed to execute this selector \""
                   + selString + "\"");
-            }
-            if (elts == null) {
               continue;
             }
 
@@ -354,7 +374,7 @@ public class CSSToInlineStyles {
                 cascadingInfo = new CSSCascadingInfo();
               }
 
-              // records current begin position of original inline styles to make sure
+              // records start position of original inline styles to make sure
               // external styles will be inserted before original inline styles
               int inlineStylePos = cascadingInfo.getInlineStylePos();
 
@@ -400,10 +420,9 @@ public class CSSToInlineStyles {
 
               cascadingInfo.setInlineStylePos(inlineStylePos);
               cascadingInfos.put(key, cascadingInfo);
-
             }
           } catch (SelectorParseException e) {
-            // LOG.debug("Error selecting CSS selector", e);
+            logger.log(Level.WARNING, "Error selecting CSS selector", e);
           }
         }
       } else if (topLevelRule instanceof CSSMediaRule) {
@@ -451,13 +470,12 @@ public class CSSToInlineStyles {
         return false;
       }
 
-      BinaryResource binaryData;
       try {
-        binaryData = fetcher.fetchResource(styleSheetUrlStr, null);
-        if (binaryData == null) {
+        ResourceData resData = fetcher.fetchResource(styleSheetUrlStr, null);
+        if (resData == null) {
           return false;
         }
-        return addStyleSheet(binaryData.asString(), styleSheetUrlStr);
+        return addStyleSheet(resData.asString(), styleSheetUrlStr);
 
       } catch (Exception e) {
         logger.log(Level.WARNING, "Faild to download style sheet " + styleSheetUrlStr

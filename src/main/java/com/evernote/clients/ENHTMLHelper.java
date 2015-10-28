@@ -10,7 +10,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.evernote.auth.EvernoteAuth;
-import com.evernote.enml.BinaryResource;
+import com.evernote.enml.ResourceData;
 import com.evernote.enml.ResourceFetcher;
 
 /**
@@ -75,7 +75,7 @@ public class ENHTMLHelper {
   public boolean downloadResourceAsFile(String resourceGuid, String filename)
       throws IOException {
     String url = this.resBaseUrl + resourceGuid;
-    return fetcher.fetchResource(url, customHeader, filename);
+    return fetcher.fetchResourceAsFile(url, customHeader, filename);
   }
 
   /**
@@ -97,9 +97,9 @@ public class ENHTMLHelper {
   public String downloadNoteAsHtml(String guid, String localResourcePath,
       String webResourcePath) throws IOException {
     String noteUrl = noteBaseUrl + guid;
-    BinaryResource binaryData = fetcher.fetchResource(noteUrl, customHeader);
-    if (binaryData != null) {
-      String html = binaryData.asString();
+    ResourceData resData = fetcher.fetchResource(noteUrl, customHeader);
+    if (resData != null) {
+      String html = resData.asString();
       if (localResourcePath != null && webResourcePath != null) {
         html = downloadAllResourcesInHTML(html, localResourcePath, webResourcePath);
       }
@@ -148,7 +148,7 @@ public class ENHTMLHelper {
   }
 
   private boolean downloadResource(String url, String filename) throws IOException {
-    return fetcher.fetchResource(url, customHeader, filename);
+    return fetcher.fetchResourceAsFile(url, customHeader, filename);
   }
 
   public ResourceFetcher getFetcher() {
