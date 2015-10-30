@@ -22,7 +22,7 @@ import java.util.logging.Logger;
 import com.evernote.edam.limits.Constants;
 
 /**
- * This is a sample implementation of ResourceFetcher.
+ * This is a sample implementation of ResourceFetcher. It doesn't handle url redirection.
  * <p>
  * If you are running your application on a server, you should use a connection pool to
  * implement your own ResourceFetcher. If you are running your application on Android,

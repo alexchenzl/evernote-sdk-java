@@ -7,7 +7,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -87,32 +86,21 @@ public class CSSToInlineStyles {
   }
 
   /**
-   * Extracts CSS file links from HTML head node, then downloads them and parses them as
+   * Extracts CSS file links from HTML content, then downloads them and parses them as
    * CascadingStyleSheet objects. If there are embedded styles, they will also be parsed.
    * 
    * @param doc
    * @param baseURLStr
    */
-  private void downloadStyleSheetsFromHead(Document doc, String baseURLStr) {
+  private void addExternalAndEmbeddedStyles(Document doc, String baseURLStr) {
 
-    Element head = doc.head();
-    Elements children = head.children();
-    if (children != null) {
-      Iterator<Element> it = children.iterator();
-      while (it.hasNext()) {
-        Element elt = it.next();
-        String tagName = elt.tagName().toLowerCase();
-        if (tagName.equals(ENMLConstants.HTML_LINK_TAG)) {
-          String rel = elt.attr("rel");
-          if (rel != null) {
-            if (rel.trim().equalsIgnoreCase("stylesheet")) {
-              String href = elt.absUrl(ENMLConstants.HTML_ANCHOR_HREF_ATTR);
-              downloadStyleSheet(elt.attr(ENMLConstants.HTML_MEDIA_ATTR), href);
-            }
-          }
-        } else if (tagName.equals("style")) {
-          addStyleSheet(elt.html(), baseURLStr);
-        }
+    Elements elts = doc.select("link[rel=\"stylesheet\"], style");
+    for (Element elt : elts) {
+      if (elt.tagName().equalsIgnoreCase("link")) {
+        String href = elt.absUrl(ENMLConstants.HTML_ANCHOR_HREF_ATTR);
+        downloadStyleSheet(elt.attr(ENMLConstants.HTML_MEDIA_ATTR), href);
+      } else {
+        addStyleSheet(elt.html(), baseURLStr);
       }
     }
 
@@ -156,7 +144,7 @@ public class CSSToInlineStyles {
     }
 
     if (cssPariList == null || cssPariList.isEmpty()) {
-      downloadStyleSheetsFromHead(doc, baseURLStr);
+      addExternalAndEmbeddedStyles(doc, baseURLStr);
     } else {
       for (CSSPair item : cssPariList) {
         addStyleSheet(item.getCss(), item.getUrl());
@@ -475,7 +463,12 @@ public class CSSToInlineStyles {
         if (resData == null) {
           return false;
         }
-        return addStyleSheet(resData.asString(), styleSheetUrlStr);
+
+        String baseUrl = resData.getFinalUrl();
+        if (baseUrl == null || baseUrl.isEmpty()) {
+          baseUrl = styleSheetUrlStr;
+        }
+        return addStyleSheet(resData.asString(), baseUrl);
 
       } catch (Exception e) {
         logger.log(Level.WARNING, "Faild to download style sheet " + styleSheetUrlStr

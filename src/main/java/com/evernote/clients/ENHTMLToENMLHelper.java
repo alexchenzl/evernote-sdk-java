@@ -69,7 +69,12 @@ public class ENHTMLToENMLHelper {
     ResourceData resourceData = fetcher.fetchResource(url.toString(), null);
     if (resourceData != null) {
       if ("text/html".equalsIgnoreCase(resourceData.getMime())) {
-        return buildNoteFromHtml(resourceData.asString(), selector, url, null);
+
+        String finalUrl = resourceData.getFinalUrl();
+        if (finalUrl == null || finalUrl.isEmpty()) {
+          finalUrl = url;
+        }
+        return buildNoteFromHtml(resourceData.asString(), selector, finalUrl, null);
       }
 
       // If the resource is not html, it will be saved as resource in a new Note

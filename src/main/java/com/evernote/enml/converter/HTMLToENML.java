@@ -24,6 +24,7 @@
 package com.evernote.enml.converter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -81,30 +82,46 @@ public class HTMLToENML {
   private static final Pattern PATTERN_DISPLAY_NONE = Pattern.compile(
       "display\\s*:\\s*none");
 
-  // some tags are visible but not permitted in ENML, try to convert them to div tags
-  // so that the content in these tags may be kept in the generated ENML content
-  protected static final Set<String> TO_DIV_TAGS = new HashSet<String>();
-
-  // some tags may need to be converted to span tags
-  protected static final Set<String> TO_SPAN_TAGS = new HashSet<String>();
+  protected static final Map<String, String> TAG_TRANSFORM_MAP =
+      new HashMap<String, String>();
+  protected static final Set<String> TAG_TO_REMOVE_SET = new HashSet<String>();
 
   static {
-    TO_DIV_TAGS.add("section");
-    TO_DIV_TAGS.add("fieldset");
-    TO_DIV_TAGS.add("main");
-    TO_DIV_TAGS.add("article");
-    TO_DIV_TAGS.add("aside");
-    TO_DIV_TAGS.add("summary");
-    TO_DIV_TAGS.add("details");
-    TO_DIV_TAGS.add("figcaption");
-    TO_DIV_TAGS.add("figure");
-    TO_DIV_TAGS.add("header");
-    TO_DIV_TAGS.add("footer");
-    TO_DIV_TAGS.add("nav");
-    TO_DIV_TAGS.add("form");
+    // tags to div
+    TAG_TRANSFORM_MAP.put("html", ENMLConstants.HTML_DIV_TAG);
+    TAG_TRANSFORM_MAP.put("body", ENMLConstants.HTML_DIV_TAG);
+    TAG_TRANSFORM_MAP.put("form", ENMLConstants.HTML_DIV_TAG);
+    TAG_TRANSFORM_MAP.put("main", ENMLConstants.HTML_DIV_TAG);
+    TAG_TRANSFORM_MAP.put("fieldset", ENMLConstants.HTML_DIV_TAG);
+    TAG_TRANSFORM_MAP.put("iframe", ENMLConstants.HTML_DIV_TAG);
+    TAG_TRANSFORM_MAP.put("embed", ENMLConstants.HTML_DIV_TAG);
+    // HTML5 tags
+    TAG_TRANSFORM_MAP.put("article", ENMLConstants.HTML_DIV_TAG);
+    TAG_TRANSFORM_MAP.put("aside", ENMLConstants.HTML_DIV_TAG);
+    TAG_TRANSFORM_MAP.put("detailes", ENMLConstants.HTML_DIV_TAG);
+    TAG_TRANSFORM_MAP.put("footer", ENMLConstants.HTML_DIV_TAG);
+    TAG_TRANSFORM_MAP.put("header", ENMLConstants.HTML_DIV_TAG);
+    TAG_TRANSFORM_MAP.put("figure", ENMLConstants.HTML_DIV_TAG);
+    TAG_TRANSFORM_MAP.put("figcaption", ENMLConstants.HTML_DIV_TAG);
+    TAG_TRANSFORM_MAP.put("hgroup", ENMLConstants.HTML_DIV_TAG);
+    TAG_TRANSFORM_MAP.put("nav", ENMLConstants.HTML_DIV_TAG);
+    TAG_TRANSFORM_MAP.put("section", ENMLConstants.HTML_DIV_TAG);
+    TAG_TRANSFORM_MAP.put("summary", ENMLConstants.HTML_DIV_TAG);
+    // tags to span
+    TAG_TRANSFORM_MAP.put("legend", ENMLConstants.HTML_SPAN_TAG);
+    TAG_TRANSFORM_MAP.put("label", ENMLConstants.HTML_SPAN_TAG);
+    TAG_TRANSFORM_MAP.put("highlight", ENMLConstants.HTML_SPAN_TAG);
+    TAG_TRANSFORM_MAP.put("mark", ENMLConstants.HTML_SPAN_TAG);
+    // tags to img
+    TAG_TRANSFORM_MAP.put("canvas", ENMLConstants.HTML_IMG_TAG);
+    TAG_TRANSFORM_MAP.put("video", ENMLConstants.HTML_IMG_TAG);
 
-    TO_SPAN_TAGS.add("mark");
-    TO_SPAN_TAGS.add("label");
+    // tags to remove
+    TAG_TO_REMOVE_SET.add("script");
+    TAG_TO_REMOVE_SET.add("noscript");
+    TAG_TO_REMOVE_SET.add("ruby");
+    TAG_TO_REMOVE_SET.add("link");
+    TAG_TO_REMOVE_SET.add("style");
   }
 
   /**
@@ -262,7 +279,7 @@ public class HTMLToENML {
       return false;
     }
     // tag names in ENML must be all lowercase
-    element.tagName(element.tagName().toLowerCase().trim());
+    element.tagName(element.tagName().toLowerCase());
 
     // call user defined element handler here
     if (customizedHandler != null) {
@@ -277,10 +294,11 @@ public class HTMLToENML {
       return handleFailure(element);
     }
 
-    // remove disallowed elements
+    // If it's not specifically allowed, either, then we'll turn it into a span, this
+    // preserves the content of special node types from HTML5 and the future.
     SimpleENMLDTD dtd = SimpleENMLDTD.getInstance();
     if (!dtd.isElementAllowed(element.tagName())) {
-      return handleFailure(element);
+      element.tagName(ENMLConstants.HTML_SPAN_TAG);
     }
 
     // clean attributes
@@ -342,21 +360,32 @@ public class HTMLToENML {
       }
     }
 
-    String elementName = element.tagName();
+    String tagName = element.tagName();
+    if (TAG_TO_REMOVE_SET.contains(tagName)) {
+      return false;
+    }
 
-    // convert some tags to div or span
-    if (TO_DIV_TAGS.contains(elementName)) {
-      element.tagName(ENMLConstants.HTML_DIV_TAG);
-    } else if (TO_SPAN_TAGS.contains(elementName)) {
-      element.tagName(ENMLConstants.HTML_SPAN_TAG);
-    } else if (elementName.equals(ENMLConstants.HTML_BODY)) {
-      element.tagName(ENMLConstants.HTML_DIV_TAG);
-    } else
-      if (elementName.equals(ENMLConstants.HTML_INPUT_TAG) && "checkbox".equalsIgnoreCase(
-          element.attr("type"))) {
-      element.tagName(ENMLConstants.EN_TODO_TAG);
-      element.removeAttr("type");
-    } else if (elementName.equals(ENMLConstants.HTML_IMG_TAG)) {
+    String toTagName = null;
+    if (tagName.equals(ENMLConstants.HTML_INPUT_TAG)) {
+      String type = element.attr("type");
+      if ("checkbox".equalsIgnoreCase(type)) {
+        toTagName = ENMLConstants.EN_TODO_TAG;
+      } else if ("image".equalsIgnoreCase(type)) {
+        toTagName = ENMLConstants.HTML_IMG_TAG;
+      } else {
+        toTagName = ENMLConstants.HTML_SPAN_TAG;
+      }
+    } else {
+      toTagName = TAG_TRANSFORM_MAP.get(tagName);
+    }
+
+    if (toTagName != null) {
+      tagName = toTagName;
+      element.tagName(tagName);
+    }
+
+    // img to en-media
+    if (tagName.equals(ENMLConstants.HTML_IMG_TAG)) {
       String imgUrl = element.absUrl(ENMLConstants.HTML_IMG_SRC_ATTR);
       if (ENMLUtil.isAcceptableURL(imgUrl)) {
         if (resourceList == null) {
@@ -394,15 +423,16 @@ public class HTMLToENML {
       } else {
         return false;
       }
-    } else if (elementName.equals(ENMLConstants.HTML_ANCHOR_TAG)) {
+    } else if (tagName.equals(ENMLConstants.HTML_ANCHOR_TAG)) {
+      // url to absolute url
       String href = element.absUrl(ENMLConstants.HTML_ANCHOR_HREF_ATTR);
       if (ENMLUtil.isAcceptableURL(href)) {
         element.attr(ENMLConstants.HTML_ANCHOR_HREF_ATTR, href);
       } else {
         return false;
       }
-
     }
+
     return true;
   }
 

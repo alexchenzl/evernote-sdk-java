@@ -18,6 +18,9 @@ public class ResourceData implements java.io.Serializable {
   private String mime;
   private String charset;
   private String filename;
+  // original url of a resource sometimes may be redrirected to another url, let's store
+  // the final redirected url here.
+  private String finalUrl;
 
   public ResourceData(byte[] bytes, String mime, String filename) {
     this.bytes = bytes;
@@ -111,6 +114,14 @@ public class ResourceData implements java.io.Serializable {
 
   public void setContent(String content) {
     this.content = content;
+  }
+
+  public String getFinalUrl() {
+    return finalUrl;
+  }
+
+  public void setFinalUrl(String finalUrl) {
+    this.finalUrl = finalUrl;
   }
 
 }
