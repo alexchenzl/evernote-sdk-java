@@ -37,7 +37,7 @@ import com.evernote.edam.userstore.AuthenticationResult;
 import com.evernote.edam.userstore.Constants;
 import com.evernote.edam.userstore.PublicUserInfo;
 import com.evernote.enml.ResourceFetcher;
-import com.evernote.enml.converter.HTMLElementHandler;
+import com.evernote.enml.converter.HTMLNodeHandler;
 import com.evernote.thrift.TException;
 import com.evernote.thrift.protocol.TBinaryProtocol;
 import com.evernote.thrift.protocol.TProtocol;
@@ -225,7 +225,7 @@ public class ENClientFactory {
    * @return A new {@link ENHTMLToENMLHelper} object
    */
   public ENHTMLToENMLHelper createHTMLToENMLHelper(ResourceFetcher fetcher,
-      HTMLElementHandler handler) {
+      HTMLNodeHandler handler) {
     return new ENHTMLToENMLHelper(fetcher, handler);
   }
 

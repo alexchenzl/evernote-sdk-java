@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -42,6 +43,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Entities;
 import org.jsoup.nodes.Node;
+import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
 import com.evernote.edam.type.Resource;
@@ -77,10 +79,19 @@ public class HTMLToENML {
   private String content;
 
   private ResourceFetcher fetcher;
-  private HTMLElementHandler customizedHandler;
+  private HTMLNodeHandler customizedHandler;
 
   private static final Pattern PATTERN_DISPLAY_NONE = Pattern.compile(
       "display\\s*:\\s*none");
+
+  // This pattern is used to find out not-allowed charachers in ENML content, Please refer
+  // to XML character range http://www.w3.org/TR/xml/#charsets
+  private static final Pattern INVALID_CONTENT_TEXT_PATTERN = Pattern
+      .compile("[^\\x09\\x0A\\x0D\\u0020-\\uD7FF\\uE000-\\uFFFD\\x{10000}-\\x{10FFFF}]");
+  // Control chars or line/paragraph separators are not allowed in title. This pattern is
+  // also used to clean keywords
+  private static final Pattern INVALID_TITLE_TEXT_PATTERN =
+      Pattern.compile("[\\p{Cc}\\p{Zl}\\p{Zp}]");
 
   protected static final Map<String, String> TAG_TRANSFORM_MAP =
       new HashMap<String, String>();
@@ -130,7 +141,7 @@ public class HTMLToENML {
    * @param fetcher
    * @param customizedHandler
    */
-  public HTMLToENML(ResourceFetcher fetcher, HTMLElementHandler customizedHandler) {
+  public HTMLToENML(ResourceFetcher fetcher, HTMLNodeHandler customizedHandler) {
     this.fetcher = fetcher;
     this.customizedHandler = customizedHandler;
   }
@@ -169,7 +180,7 @@ public class HTMLToENML {
    * <p>
    * By default, the keywords are extracted from the meta tag with the "keywords"
    * property. Developers can use their own methods to extract keywords by implementing
-   * {@link HTMLElementHandler}
+   * {@link HTMLNodeHandler}
    * 
    * @return The keywords string
    */
@@ -227,6 +238,8 @@ public class HTMLToENML {
       title = ENMLUtil.cleanString(title);
       if (title.isEmpty()) {
         title = null;
+      } else {
+        title = removeInvalidChar(title, INVALID_TITLE_TEXT_PATTERN);
       }
     }
 
@@ -239,11 +252,14 @@ public class HTMLToENML {
       extractKeywords(doc);
     }
 
+    if (keywords != null) {
+      keywords = removeInvalidChar(keywords, INVALID_TITLE_TEXT_PATTERN);
+    }
+
     if (selector == null || selector.isEmpty()) {
       Element bodyElement = doc.body();
       if (bodyElement != null) {
-        if (processElement(bodyElement)) {
-          removeComments(bodyElement);
+        if (traverse(bodyElement)) {
           content = bodyElement.toString();
           return true;
         }
@@ -256,8 +272,7 @@ public class HTMLToENML {
       StringBuilder builder = new StringBuilder();
       for (int i = 0; i < elts.size(); i++) {
         Element elt = elts.get(i);
-        if (processElement(elt)) {
-          removeComments(elt);
+        if (traverse(elt)) {
           builder.append(elt.toString());
         }
       }
@@ -269,77 +284,106 @@ public class HTMLToENML {
     return false;
   }
 
-  private boolean handleFailure(Element element) {
-    element.remove();
-    return false;
+  /**
+   * 
+   * Depth-first traverse
+   * 
+   */
+  protected boolean traverse(Node root) {
+    Node node = root;
+    int depth = 0;
+    boolean result = false;
+    Stack<Boolean> resultStack = new Stack<Boolean>();
+    while (node != null) {
+      result = head(node, depth);
+      resultStack.push(result);
+      if (node.childNodeSize() > 0) {
+        node = node.childNode(0);
+        depth++;
+      } else {
+        Node nextSibling = node.nextSibling();
+        while (nextSibling == null && depth > 0) {
+          Node parent = node.parentNode();
+          result = resultStack.pop();
+          tail(node, depth, result);
+          node = parent;
+          nextSibling = node.nextSibling();
+          depth--;
+        }
+
+        result = resultStack.pop();
+        tail(node, depth, result);
+        if (node == root)
+          break;
+        node = nextSibling;
+      }
+    }
+    return result;
   }
 
-  protected boolean processElement(Element element) {
-    if (element == null) {
+  protected boolean head(Node node, int depth) {
+
+    if (!(node instanceof Element) && !(node instanceof TextNode)) {
       return false;
     }
-    // tag names in ENML must be all lowercase
-    element.tagName(element.tagName().toLowerCase());
 
     // call user defined element handler here
     if (customizedHandler != null) {
-      if (!customizedHandler.process(element, fetcher)) {
-        return handleFailure(element);
+      if (!customizedHandler.process(node, fetcher)) {
+        return false;
       }
     }
 
-    // convert some special tags to ENML tags
-    // for example: body --> div, img --> en-media
-    if (!transformSpecialTags(element)) {
-      return handleFailure(element);
-    }
+    if (node instanceof Element) {
+      Element element = (Element) node;
+      // tag names in ENML must be all lowercase
+      element.tagName(element.tagName().toLowerCase());
 
-    // If it's not specifically allowed, either, then we'll turn it into a span, this
-    // preserves the content of special node types from HTML5 and the future.
-    SimpleENMLDTD dtd = SimpleENMLDTD.getInstance();
-    if (!dtd.isElementAllowed(element.tagName())) {
-      element.tagName(ENMLConstants.HTML_SPAN_TAG);
-    }
-
-    // clean attributes
-    cleanAttributes(dtd, element);
-
-    // process children
-    Elements children = element.children();
-    if (children.size() > 0) {
-      int remainedChildren = 0;
-      Iterator<Element> it = children.iterator();
-      while (it.hasNext()) {
-        Element element2 = it.next();
-        if (element2 != null) {
-          if (processElement(element2)) {
-            remainedChildren++;
-          }
-        }
+      // convert some special tags to ENML tags
+      // for example: body --> div, img --> en-media
+      if (!transformSpecialTags(element)) {
+        return false;
       }
 
-      // If all children are removed, and the content of this element is empty, then
-      // remove this element and return false;
-      if (remainedChildren == 0) {
-        String text = element.text();
-        if (text == null || text.trim().isEmpty()) {
-          return handleFailure(element);
-        }
+      // If it's not specifically allowed, either, then we'll turn it into a span, this
+      // preserves the content of special node types from HTML5 and the future.
+      SimpleENMLDTD dtd = SimpleENMLDTD.getInstance();
+      if (!dtd.isElementAllowed(element.tagName())) {
+        element.tagName(ENMLConstants.HTML_SPAN_TAG);
       }
+
+      // clean attributes
+      cleanAttributes(dtd, element);
     }
+
     return true;
+
   }
 
-  private static void removeComments(Node node) {
-    for (int i = 0; i < node.childNodes().size();) {
-      Node child = node.childNode(i);
-      if (child.nodeName().equals("#comment")) {
-        child.remove();
-      } else {
-        removeComments(child);
-        i++;
-      }
+  public long replaceTime = 0;
+
+  protected void tail(Node node, int depth, boolean result) {
+    if (!result) {
+      node.remove();
+      return;
     }
+
+    if (node instanceof TextNode) {
+      TextNode textNode = (TextNode) node;
+      String text = removeInvalidChar(textNode.text(), INVALID_CONTENT_TEXT_PATTERN);
+      textNode.text(text);
+    }
+
+  }
+
+  private String removeInvalidChar(String text, Pattern pattern) {
+    Matcher m = pattern.matcher(text);
+    StringBuffer sb = new StringBuffer(text.length());
+    while (m.find()) {
+      m.appendReplacement(sb, Matcher.quoteReplacement(""));
+    }
+    m.appendTail(sb);
+    return sb.toString();
   }
 
   /**

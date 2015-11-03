@@ -12,7 +12,7 @@ import com.evernote.enml.ENMLConstants;
 import com.evernote.enml.ENMLUtil;
 import com.evernote.enml.ResourceData;
 import com.evernote.enml.ResourceFetcher;
-import com.evernote.enml.converter.HTMLElementHandler;
+import com.evernote.enml.converter.HTMLNodeHandler;
 import com.evernote.enml.converter.HTMLToENML;
 import com.evernote.enml.css.CSSPair;
 import com.evernote.enml.css.CSSToInlineStyles;
@@ -29,7 +29,7 @@ import com.evernote.enml.css.CSSToInlineStyles;
 public class ENHTMLToENMLHelper {
 
   private ResourceFetcher fetcher;
-  private HTMLElementHandler handler;
+  private HTMLNodeHandler handler;
 
   /**
    * Constructs a ENHTMLToENMLHelper object.
@@ -39,10 +39,10 @@ public class ENHTMLToENMLHelper {
    *          remote servers.
    * @param handler If you want to add some customized process step before the built-in
    *          HTML to ENML transform steps, you can implement your own
-   *          {@link HTMLElementHandler}. This parameter can be null.
+   *          {@link HTMLNodeHandler}. This parameter can be null.
    * 
    */
-  public ENHTMLToENMLHelper(ResourceFetcher fetcher, HTMLElementHandler handler) {
+  public ENHTMLToENMLHelper(ResourceFetcher fetcher, HTMLNodeHandler handler) {
     if (fetcher == null) {
       throw new IllegalArgumentException("The argument fetcher must not be null!");
     }
@@ -157,11 +157,11 @@ public class ENHTMLToENMLHelper {
     this.fetcher = fetcher;
   }
 
-  public HTMLElementHandler getHandler() {
+  public HTMLNodeHandler getHandler() {
     return handler;
   }
 
-  public void setHandler(HTMLElementHandler handler) {
+  public void setHandler(HTMLNodeHandler handler) {
     this.handler = handler;
   }
 

@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
 
 import com.evernote.auth.EvernoteAuth;
 import com.evernote.auth.EvernoteService;
@@ -53,7 +54,7 @@ import com.evernote.edam.type.ResourceAttributes;
 import com.evernote.edam.type.Tag;
 import com.evernote.enml.ResourceFetcher;
 import com.evernote.enml.SimpleResourceFetcher;
-import com.evernote.enml.converter.HTMLElementHandler;
+import com.evernote.enml.converter.HTMLNodeHandler;
 import com.evernote.thrift.TException;
 import com.evernote.thrift.transport.TTransportException;
 
@@ -515,27 +516,30 @@ public class EDAMDemo {
   /**
    * 
    * Because HTMLToENMLHelper can not process pseudo classes and pseudo elements, we need
-   * to implement a customized element handler to clip blogs on blog.evernote.com, so that
-   * we can get a better layout.
+   * to implement a customized node handler to clip blogs on blog.evernote.com, so that we
+   * can get a better layout.
    * 
    */
-  final class EvernoteBlogElementHandler implements HTMLElementHandler {
+  final class EvernoteBlogNodeHandler implements HTMLNodeHandler {
 
     public void initialize() {
       // Don't need initialization here
     }
 
-    public boolean process(Element element, ResourceFetcher fetcher) {
-      String className = element.className();
-      if (className != null) {
-        // Class top and bottom use :after to clear float, but it can not be handled by
-        // the converter. So we can add a div tag to implement the same effect in ENML
-        if (className.equals("top") || className.equals("bottom")) {
-          element.after("<div style=\"clear:both;\"></div>");
-        } else if (className.contains("premium-callout")) {
-          // False means the element should be removed from the DOM tree, but do NOT
-          // remove it here
-          return false;
+    public boolean process(Node node, ResourceFetcher fetcher) {
+      if (node instanceof Element) {
+        Element element = (Element) node;
+        String className = element.className();
+        if (className != null) {
+          // Class top and bottom use :after to clear float, but it can not be handled by
+          // the converter. So we can add a div tag to implement the same effect in ENML
+          if (className.equals("top") || className.equals("bottom")) {
+            element.after("<div style=\"clear:both;\"></div>");
+          } else if (className.contains("premium-callout")) {
+            // False means the node should be removed from the DOM tree, but do NOT
+            // remove it here
+            return false;
+          }
         }
       }
       // True means this element needs further process
@@ -561,7 +565,7 @@ public class EDAMDemo {
     // If you want to add a customized process step before the built-in transformation
     // steps, please implement your own HTMLElementHandler.
 
-    HTMLElementHandler handler = new EvernoteBlogElementHandler();
+    HTMLNodeHandler handler = new EvernoteBlogNodeHandler();
 
     ENHTMLToENMLHelper helper = factory.createHTMLToENMLHelper(fetcher, handler);
 

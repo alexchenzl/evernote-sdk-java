@@ -4,7 +4,7 @@
 package com.evernote.enml.converter;
 
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
 
 import com.evernote.enml.ResourceFetcher;
 
@@ -14,7 +14,7 @@ import com.evernote.enml.ResourceFetcher;
  * 
  * @author alexchenzl
  */
-public interface HTMLElementHandler {
+public interface HTMLNodeHandler {
 
   /**
    * Initializes the handler before converting a HTML string to an ENML string
@@ -23,13 +23,16 @@ public interface HTMLElementHandler {
   public void initialize();
 
   /**
-   * This interface is called before an element is processed by HTMLToENML built-in
-   * transforming methods. Do NOT call element.remove() in this function, it may cause
-   * unexpected exceptions.
+   * This interface is called before a node is processed by HTMLToENML built-in
+   * transforming methods. The node type can be either org.jsoup.nodes.TextNode or
+   * org.jsoup.nodes.Element.
+   * <p>
+   * DO NOT remove the node in this function, it may cause unexpected exceptions. Be
+   * careful to execute any other functions that may change the DOM tree's structure,
+   * because it may cause the HTMLToENML object can not traverse all nodes. But it's free
+   * to modify other attributes of the node.
    * 
-   * The tag name of this element has already been converted to all lower case
-   * 
-   * @param element A Jsoup Element object to be processed
+   * @param node The Jsoup Node object to be processed.
    * @param fetcher Resource fetcher
    * @return {@code true} means this element should be converted to an ENML element, the
    *         application will execute subsequent built-in processes on this element after
@@ -37,7 +40,7 @@ public interface HTMLElementHandler {
    *         converted to an ENML element, it will be removed from the Jsoup DOM tree
    *         after this function returns.
    */
-  public boolean process(Element element, ResourceFetcher fetcher);
+  public boolean process(Node node, ResourceFetcher fetcher);
 
   /**
    * User defined logic to extract keywords from the HTML documents. The keywords can be
