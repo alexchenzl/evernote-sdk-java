@@ -11,26 +11,16 @@
  */
 package com.evernote;
 
-import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
 import java.util.Iterator;
 import java.util.List;
 
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.nodes.Node;
-
 import com.evernote.auth.EvernoteAuth;
 import com.evernote.auth.EvernoteService;
 import com.evernote.clients.ENBusinessNotebookHelper;
 import com.evernote.clients.ENClientFactory;
-import com.evernote.clients.ENHTMLHelper;
-import com.evernote.clients.ENHTMLToENMLHelper;
 import com.evernote.clients.ENLinkedNotebookHelper;
 import com.evernote.clients.ENSearchHelper;
 import com.evernote.clients.ENSearchHelper.SearchParam;
@@ -52,9 +42,6 @@ import com.evernote.edam.type.Notebook;
 import com.evernote.edam.type.Resource;
 import com.evernote.edam.type.ResourceAttributes;
 import com.evernote.edam.type.Tag;
-import com.evernote.enml.ResourceFetcher;
-import com.evernote.enml.SimpleResourceFetcher;
-import com.evernote.enml.converter.HTMLNodeHandler;
 import com.evernote.thrift.TException;
 import com.evernote.thrift.transport.TTransportException;
 
@@ -131,12 +118,6 @@ public class EDAMDemo {
 
       // search notes in business store
       demo.search(noteStore, linkedNotebook);
-
-      // Clip a web page
-      demo.clipWebPage(noteStore);
-
-      // download a note's content as HTML, and save it as a local file
-      demo.downloadNoteAsHtmlFile(createdNote.getGuid());
 
     } catch (EDAMUserException e) {
       // These are the most common error types that you'll need to
@@ -511,110 +492,6 @@ public class EDAMDemo {
       }
     }
     System.out.println();
-  }
-
-  /**
-   * 
-   * Because HTMLToENMLHelper can not process pseudo classes and pseudo elements, we need
-   * to implement a customized node handler to clip blogs on blog.evernote.com, so that we
-   * can get a better layout.
-   * 
-   */
-  final class EvernoteBlogNodeHandler implements HTMLNodeHandler {
-
-    public void initialize() {
-      // Don't need initialization here
-    }
-
-    public boolean process(Node node, ResourceFetcher fetcher) {
-      if (node instanceof Element) {
-        Element element = (Element) node;
-        String className = element.className();
-        if (className != null) {
-          // Class top and bottom use :after to clear float, but it can not be handled by
-          // the converter. So we can add a div tag to implement the same effect in ENML
-          if (className.equals("top") || className.equals("bottom")) {
-            element.after("<div style=\"clear:both;\"></div>");
-          } else if (className.contains("premium-callout")) {
-            // False means the node should be removed from the DOM tree, but do NOT
-            // remove it here
-            return false;
-          }
-        }
-      }
-      // True means this element needs further process
-      return true;
-    }
-
-    public String extractKeywords(Document doc) {
-      // TODO Auto-generated method stub
-      return null;
-    }
-  }
-
-  private Note clipWebPage(NoteStoreClient noteStore) throws EDAMUserException,
-      EDAMSystemException, EDAMNotFoundException, TException, IOException {
-
-    // The SimpleResourceFetcher is designed just for demonstration. You should implement
-    // your own ResourceFetcher. If you are developing a server application, a connection
-    // pool should be used to implement this interface. If you are developing an Android
-    // application, OkHttpClient may be a good choice to use.
-
-    ResourceFetcher fetcher = new SimpleResourceFetcher();
-
-    // If you want to add a customized process step before the built-in transformation
-    // steps, please implement your own HTMLElementHandler.
-
-    HTMLNodeHandler handler = new EvernoteBlogNodeHandler();
-
-    ENHTMLToENMLHelper helper = factory.createHTMLToENMLHelper(fetcher, handler);
-
-    String url =
-        "https://blog.evernote.com/blog/2015/07/13/astronaut-ron-garans-space-inspired-lessons-on-collaboration/";
-
-    // use a CSS like selector to clip specified components of this web page. For more
-    // information, please refer to
-    // http://jsoup.org/cookbook/extracting-data/selector-syntax
-    //
-    // Here we only want to clip the main content of this page
-
-    String selector = "section.post";
-    Note note = helper.buildNoteFromURL(url, selector);
-    note = noteStore.createNote(note);
-    System.out.println("Content of this page " + url + " \nis saved to a new note "
-        + note.getGuid());
-    System.out.println();
-    return note;
-  }
-
-  /**
-   * ENML content of a Note will be downloaded as an HTML snippet. Resources in this note
-   * will also be downloaded to local disk
-   * 
-   */
-  private void downloadNoteAsHtmlFile(String noteGuid) throws TTransportException,
-      EDAMUserException, EDAMSystemException, TException, IOException {
-
-    ResourceFetcher fetcher = new SimpleResourceFetcher();
-
-    ENHTMLHelper helper = factory.createHTMLHelper(fetcher);
-
-    String html = helper.downloadNoteAsHtml(noteGuid, "", "");
-
-    if (html != null) {
-      String filename = "demo.html";
-      File file = new File(filename);
-      if (!file.exists()) {
-        file.createNewFile();
-      }
-      FileWriter fw = new FileWriter(file.getAbsoluteFile());
-      BufferedWriter bw = new BufferedWriter(fw);
-      bw.write(html);
-      bw.close();
-      System.out.println("The content of this note " + noteGuid + " was saved as file "
-          + file.getAbsoluteFile());
-      System.out.println();
-    }
   }
 
 }

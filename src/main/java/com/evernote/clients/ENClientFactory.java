@@ -36,8 +36,6 @@ import com.evernote.edam.type.User;
 import com.evernote.edam.userstore.AuthenticationResult;
 import com.evernote.edam.userstore.Constants;
 import com.evernote.edam.userstore.PublicUserInfo;
-import com.evernote.enml.ResourceFetcher;
-import com.evernote.enml.converter.HTMLNodeHandler;
 import com.evernote.thrift.TException;
 import com.evernote.thrift.protocol.TBinaryProtocol;
 import com.evernote.thrift.protocol.TProtocol;
@@ -189,44 +187,6 @@ public class ENClientFactory {
       EDAMSystemException, TException {
     NoteStoreClient personalClient = createNoteStoreClient();
     return new ENSearchHelper(this, personalClient);
-  }
-
-  /**
-   * Creates a new {@link ENHTMLHelper} instance.
-   * 
-   * The returned instance can be used for any number of API calls, but is NOT thread
-   * safe.
-   * 
-   * @param fetcher
-   * @return A new {@link ENHTMLHelper} object
-   * @throws TTransportException
-   * @throws EDAMUserException
-   * @throws EDAMSystemException
-   * @throws TException
-   */
-  public ENHTMLHelper createHTMLHelper(ResourceFetcher fetcher)
-      throws TTransportException, EDAMUserException, EDAMSystemException, TException {
-    String noteStoreUrl = this.evernoteAuth.getWebApiUrlPrefix();
-    if (noteStoreUrl == null) {
-      noteStoreUrl = createUserStoreClient().getNoteStoreUrl();
-      this.evernoteAuth.setNoteStoreUrl(noteStoreUrl);
-    }
-    return new ENHTMLHelper(this.evernoteAuth, fetcher);
-  }
-
-  /**
-   * Creates a new {@link ENHTMLToENMLHelper} instance.
-   * 
-   * The returned instance can be used for any number of API calls, but is NOT thread
-   * safe.
-   * 
-   * @param fetcher
-   * @param handler
-   * @return A new {@link ENHTMLToENMLHelper} object
-   */
-  public ENHTMLToENMLHelper createHTMLToENMLHelper(ResourceFetcher fetcher,
-      HTMLNodeHandler handler) {
-    return new ENHTMLToENMLHelper(fetcher, handler);
   }
 
   protected <T> T createStoreClient(Class<T> clientClass, String url, String token)
