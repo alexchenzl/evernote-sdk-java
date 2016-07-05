@@ -76,7 +76,7 @@ public class ENSearchHelper {
    */
   public List<NotesMetadataList> findNotesInLinkedNotebook(final SearchParam search,
       final LinkedNotebook linkedNotebook) throws EDAMUserException, EDAMSystemException,
-          EDAMNotFoundException, TException {
+      EDAMNotFoundException, TException {
 
     if (search == null || linkedNotebook == null) {
       return null;
@@ -116,7 +116,7 @@ public class ENSearchHelper {
 
   private List<NotesMetadataList> findNotesMetadata(SearchParam search,
       NoteStoreClient client, NoteFilter filter) throws EDAMUserException,
-          EDAMSystemException, EDAMNotFoundException, TException {
+      EDAMSystemException, EDAMNotFoundException, TException {
 
     List<NotesMetadataList> result = new ArrayList<NotesMetadataList>();
     final int maxNotes = search.getMaxNotes();
@@ -126,9 +126,14 @@ public class ENSearchHelper {
     while (remaining > 0) {
       NotesMetadataList notesMetadata = client.findNotesMetadata(filter, offset, maxNotes,
           search.getResultSpec());
-      offset = notesMetadata.getStartIndex() + notesMetadata.getNotesSize();
-      remaining = notesMetadata.getTotalNotes() - offset;
       result.add(notesMetadata);
+
+      offset = notesMetadata.getStartIndex() + notesMetadata.getNotesSize();
+      if (notesMetadata.getTotalNotes() <= offset) {
+        remaining = 0;
+      } else {
+        remaining = maxNotes - offset;
+      }
     }
     return result;
 
